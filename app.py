@@ -32,7 +32,7 @@ st.set_page_config(
     page_title="LIFEWISE AI | Personal AI Counselor",
     page_icon="🧭",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 APP_DIR = Path(__file__).parent
@@ -105,42 +105,43 @@ def display_name(user_row):
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
-:root { --lw-navy:#102f61; --lw-blue:#1769c2; --lw-orange:#f39a24; --lw-ink:#172b4d; --lw-muted:#64748b; }
-html, body, [class*="css"] { font-family:'DM Sans', sans-serif; }
-.stApp { background:linear-gradient(135deg,#f5f9ff 0%,#ffffff 48%,#f3f7ff 100%); color:var(--lw-ink); }
-[data-testid="stAppViewContainer"] { background:transparent; }
-.block-container { padding-top:1.25rem; padding-bottom:2.5rem; max-width:1380px; }
-header[data-testid="stHeader"] { background:rgba(255,255,255,.72); }
-.lw-topbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.8rem 1.1rem; margin-bottom:1.1rem; border:1px solid #dce8f8; border-radius:20px; background:rgba(255,255,255,.9); box-shadow:0 8px 28px rgba(22,62,120,.07); }
-.lw-brand-copy { color:var(--lw-muted); font-size:.92rem; margin-top:-.25rem; }
-.lw-status { display:inline-flex; align-items:center; gap:.45rem; color:#147b48; font-weight:700; font-size:.82rem; background:#eaf8f0; padding:.45rem .75rem; border-radius:99px; white-space:nowrap; }
-.lw-dot { width:8px;height:8px;border-radius:50%;background:#22b36b;display:inline-block; }
-.lw-hero { padding:1.35rem 1.45rem; border-radius:22px; background:linear-gradient(115deg,#102f61 0%,#1769c2 70%,#3989dc 100%); color:white; box-shadow:0 12px 28px rgba(23,83,157,.16); margin-bottom:1.1rem; }
-.lw-hero h2 { color:white !important; font-family:Manrope,sans-serif; margin:0 0 .35rem 0; font-size:1.55rem; }
-.lw-hero p { color:#e5efff !important; margin:0; }
-.lw-auth-panel { background:rgba(255,255,255,.92); border:1px solid #dce7f7; border-radius:24px; padding:1.35rem; box-shadow:0 14px 40px rgba(28,67,122,.08); min-height:100%; }
-.lw-auth-hero { background:linear-gradient(145deg,#102f61,#1769c2 72%,#438fda); color:#fff; border-radius:24px; padding:2rem 1.6rem; min-height:430px; box-shadow:0 14px 40px rgba(28,67,122,.15); }
-.lw-auth-hero h1 { color:white !important; font-family:Manrope,sans-serif; font-size:2.05rem; line-height:1.2; }
-.lw-auth-hero p { color:#e7f1ff !important; }
-.lw-feature { border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.1); border-radius:14px; padding:.75rem .9rem; margin-top:.7rem; }
-.lw-card { padding:1.05rem 1.15rem; border:1px solid #dce7f7; border-radius:18px; background:rgba(255,255,255,.9); box-shadow:0 5px 18px rgba(28,67,122,.045); margin-bottom:.8rem; }
-.lw-guest { border-color:#9fc4f8; background:linear-gradient(120deg,#f1f7ff,#fff); }
-.lw-section-title { font-family:Manrope,sans-serif; color:var(--lw-navy); font-weight:800; }
-[data-testid="stChatMessage"] { border:1px solid #e1eaf7; border-radius:18px; padding:.85rem 1rem; background:rgba(255,255,255,.94); box-shadow:0 5px 16px rgba(28,67,122,.045); margin-bottom:.75rem; }
-[data-testid="stChatInput"] { border:1px solid #b9d2f4; border-radius:20px; box-shadow:0 7px 24px rgba(28,91,166,.10); background:#fff; }
-[data-testid="stChatInput"] textarea { font-size:1rem; }
-[data-testid="stChatInput"] > div { border-radius:20px; }
-[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] { line-height:1.7; }
-.lw-chat-meta { color:#8291a8; font-size:.72rem; margin-top:.25rem; }
-.lw-chat-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
-div.stButton > button, div.stFormSubmitButton > button { border-radius:12px; font-weight:650; min-height:2.7rem; border-color:#cbdcf2; }
-div.stButton > button[kind="primary"], div.stFormSubmitButton > button[kind="primary"] { background:linear-gradient(100deg,#1769c2,#0f4e9b); border:0; color:white; }
-[data-testid="stSidebar"] { background:linear-gradient(180deg,#f1f6ff,#fff); border-right:1px solid #dce7f7; }
-[data-testid="stSidebar"] [data-testid="stImage"] img { border-radius:12px; }
-.stTabs [data-baseweb="tab-list"] { gap:.45rem; }
-.stTabs [data-baseweb="tab"] { border-radius:10px 10px 0 0; padding:.65rem 1rem; }
-hr { border-color:#e3ebf6; }
-@media(max-width:800px){ .block-container{padding-left:1rem;padding-right:1rem;} .lw-auth-hero{min-height:auto;} }
+:root{--navy:#172f54;--blue:#315fce;--ink:#1d2b3f;--muted:#718096;--line:#e5eaf2}
+html,body,[class*="css"]{font-family:'DM Sans',sans-serif;color:var(--ink)}
+.stApp{background:#f5f7fb}[data-testid="stAppViewContainer"]{background:transparent}
+.block-container{padding-top:1.1rem;padding-bottom:3rem;max-width:1440px}
+header[data-testid="stHeader"]{background:rgba(245,247,251,.92)}footer{visibility:hidden}
+.lw-brand-copy{color:var(--muted);font-size:.88rem;margin-top:-.25rem}
+.lw-status{display:inline-flex;align-items:center;gap:.45rem;color:#137a65;font-weight:700;font-size:.78rem;background:#eaf7f3;padding:.42rem .72rem;border-radius:99px;white-space:nowrap}
+.lw-dot{width:7px;height:7px;border-radius:50%;background:#19a783;display:inline-block}
+.lw-hero{padding:1.45rem 1.65rem;border-radius:20px;background:linear-gradient(112deg,#172f54,#315fce 78%,#4978df);color:white;box-shadow:0 10px 26px rgba(37,76,154,.12);margin:.35rem 0 1.15rem}
+.lw-hero h2{color:white!important;font-family:Manrope,sans-serif;margin:0 0 .38rem;font-size:1.55rem;letter-spacing:-.025em}
+.lw-hero p{color:#e8efff!important;margin:0;line-height:1.55}
+.lw-auth-panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:1.4rem;box-shadow:0 8px 28px rgba(20,43,74,.045);min-height:100%}
+.lw-auth-hero{background:linear-gradient(145deg,#172f54,#315fce 76%,#4778d8);color:#fff;border-radius:22px;padding:2rem 1.65rem;min-height:430px}
+.lw-auth-hero h1{color:white!important;font-family:Manrope,sans-serif;font-size:2.05rem;line-height:1.2;letter-spacing:-.035em}
+.lw-auth-hero p{color:#e8efff!important;line-height:1.65}
+.lw-feature{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.09);border-radius:13px;padding:.78rem .9rem;margin-top:.7rem}
+.lw-card{padding:1.05rem 1.15rem;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 3px 13px rgba(20,43,74,.035);margin-bottom:.8rem}
+.lw-guest{border-color:#cbd9f7;background:#f2f6ff}
+.lw-metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:1rem 1.1rem;min-height:105px;box-shadow:0 3px 13px rgba(20,43,74,.035)}
+.lw-metric-label{color:var(--muted);font-size:.82rem;font-weight:600}
+.lw-metric-value{color:var(--navy);font:800 1.75rem Manrope,sans-serif;margin-top:.25rem}
+.lw-subtle{color:var(--muted);font-size:.9rem}
+[data-testid="stChatMessage"]{border:1px solid var(--line);border-radius:16px;padding:.85rem 1rem;background:#fff;box-shadow:0 2px 10px rgba(20,43,74,.03);margin-bottom:.7rem}
+[data-testid="stChatInput"]{border:1px solid #d7e0ef;border-radius:16px;box-shadow:0 4px 16px rgba(37,76,154,.06);background:#fff}
+[data-testid="stChatInput"] textarea{font-size:1rem}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"]{line-height:1.7}
+.lw-chat-meta{color:#8793a5;font-size:.72rem;margin-top:.25rem}
+div.stButton>button,div.stFormSubmitButton>button{border-radius:11px;font-weight:650;min-height:2.55rem;border:1px solid #dbe3ef}
+div.stButton>button[kind="primary"],div.stFormSubmitButton>button[kind="primary"]{background:var(--blue);border:0;color:white}
+[data-testid="stSidebar"]{background:#fff;border-right:1px solid var(--line)}
+[data-testid="stSidebar"] [data-testid="stImage"] img{border-radius:12px}
+.stRadio [role="radiogroup"]{gap:.35rem}
+.stRadio [role="radiogroup"] label{background:#fff;border:1px solid var(--line);border-radius:11px;padding:.48rem .78rem;margin:0;font-weight:650}
+.stRadio [role="radiogroup"] label:has(input:checked){background:#eaf0ff;border-color:#b9c9f2;color:#244aa8}
+div[data-testid="stExpander"]{border:1px solid var(--line);border-radius:13px}
+hr{border-color:var(--line)}
+@media(max-width:800px){.block-container{padding-left:.85rem;padding-right:.85rem;padding-top:.7rem}.lw-auth-hero{min-height:auto;padding:1.45rem}.lw-hero{padding:1.15rem 1.2rem;border-radius:16px}.lw-hero h2{font-size:1.3rem}.lw-auth-hero h1{font-size:1.65rem}.stRadio [role="radiogroup"]{flex-wrap:wrap}.stRadio [role="radiogroup"] label{padding:.4rem .58rem;font-size:.82rem}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -149,7 +150,7 @@ def show_brand():
     brand_col, status_col = st.columns([5, 1])
     with brand_col:
         if LOGO_PATH.exists():
-            st.image(str(LOGO_PATH), width=390)
+            st.image(str(LOGO_PATH), width=250)
         else:
             st.markdown("# 🧭 LIFEWISE AI")
         st.markdown('<div class="lw-brand-copy">Your personal AI counselor · Learn · Grow · Achieve</div>', unsafe_allow_html=True)
@@ -790,6 +791,38 @@ def show_profile_page(user_id):
         st.write("**Community visibility:** " + ("On" if profile.get("community_visible") else "Off"))
 
 
+
+
+def show_overview(user_id, email):
+    profile = get_profile(user_id)
+    goals = list_goals(user_id)
+    memories = get_approved_memories(user_id, limit=200)
+    unread = unread_direct_message_count(user_id)
+    active = sum(1 for g in goals if str(g.get("status", "")).lower() not in ("completed", "done"))
+    completed = len(goals) - active
+    first_name = (profile.get("name") or "there").strip().split()[0]
+    st.markdown(f'<div class="lw-hero"><h2>Welcome back, {first_name}.</h2><p>Your personal growth workspace. Choose one small step and make today count.</p></div>', unsafe_allow_html=True)
+    st.markdown("### Your workspace")
+    st.caption("A quick view of your progress and the tools available to you.")
+    cols = st.columns(4)
+    for col, (label, value) in zip(cols, [("Active goals", active), ("Completed goals", completed), ("Saved memories", len(memories)), ("Unread messages", unread)]):
+        with col:
+            st.markdown(f'<div class="lw-metric"><div class="lw-metric-label">{label}</div><div class="lw-metric-value">{value}</div></div>', unsafe_allow_html=True)
+    st.write("")
+    left, right = st.columns([1.15, 1], gap="large")
+    with left:
+        st.markdown("### Your tools")
+        st.markdown('<div class="lw-card"><b>💬 AI Counselor</b><br><span class="lw-subtle">Explore a question, career idea or learning plan.</span></div><div class="lw-card"><b>🎯 Goals</b><br><span class="lw-subtle">Turn an ambition into clear, manageable actions.</span></div><div class="lw-card"><b>👥 Community</b><br><span class="lw-subtle">Connect with opted-in members and join the conversation.</span></div>', unsafe_allow_html=True)
+    with right:
+        st.markdown("### Recent goals")
+        if goals:
+            for goal in goals[:5]:
+                st.markdown(f'<div class="lw-card"><b>{goal.get("title", "Untitled goal")}</b><br><span class="lw-subtle">{goal.get("area", "General")} · {goal.get("status") or "In progress"}</span></div>', unsafe_allow_html=True)
+        else:
+            st.info("You haven't added a goal yet. Open Goals to create your first one.")
+        st.caption(f"Signed in as {email}")
+
+
 def show_registered_app(user):
     user_id = user["id"]
     email = user.get("email") or user["username"]
@@ -798,24 +831,25 @@ def show_registered_app(user):
 
     show_sidebar(user_id, email)
     show_brand()
-    st.markdown('<div class="lw-hero"><h2>Welcome back. Let’s make progress.</h2><p>Your personal space to ask questions, build skills and move your goals forward.</p></div>', unsafe_allow_html=True)
     st.caption(f"Personal workspace · Signed in as {email}")
-    chat_tab, goals_tab, community_tab, messages_tab, profile_tab = st.tabs([
-        "💬 Counselor", "🎯 Goals", "👥 Community", "✉️ Messages", "👤 Profile"
-    ])
-    with chat_tab:
-        st.info(
-            "LIFEWISE AI is a guidance prototype, not a replacement for licensed "
-            "medical, legal, financial or career professionals."
-        )
+    pages = ["Overview", "AI Counselor", "Goals", "Community", "Messages", "Profile"]
+    selected_page = st.radio("Main navigation", pages, horizontal=True,
+                             label_visibility="collapsed", key="main_navigation")
+    st.divider()
+    if selected_page == "Overview":
+        show_overview(user_id, email)
+    elif selected_page == "AI Counselor":
+        st.markdown("### AI Counselor")
+        st.caption("Ask a question, explore an idea or work through your next step.")
+        st.info("LIFEWISE AI is a guidance prototype, not a replacement for licensed medical, legal, financial or career professionals.")
         render_chat(recent_messages(user_id, limit=40), user_id=user_id)
-    with goals_tab:
+    elif selected_page == "Goals":
         show_goals(user_id)
-    with community_tab:
+    elif selected_page == "Community":
         show_community(user_id)
-    with messages_tab:
+    elif selected_page == "Messages":
         show_messages(user_id)
-    with profile_tab:
+    elif selected_page == "Profile":
         show_profile_page(user_id)
 
 

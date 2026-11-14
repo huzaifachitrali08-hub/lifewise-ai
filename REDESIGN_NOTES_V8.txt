@@ -1,0 +1,24 @@
+LIFEWISE AI — PROFESSIONAL UI REDESIGN (V8 UI UPDATE)
+
+CHANGES
+- New Overview dashboard with live goal, memory and unread-message counts.
+- Clear navigation: Overview, AI Counselor, Goals, Community, Messages and Profile.
+- Refined typography, spacing, buttons, chat surfaces and navy/blue colour system.
+- Sidebar collapsed by default and responsive navigation styling for mobile.
+- Existing data functions and feature modules retained; no DB schema migration.
+
+INSTALL
+1. Back up the original project folder and lifewise.db.
+2. Extract this ZIP into a NEW folder; keep the original for rollback.
+3. Keep .env private and do not commit secrets or lifewise.db to GitHub.
+4. Install: pip install -r requirements.txt
+5. Run: streamlit run app.py
+6. Test all pages and database behavior using a backup database first.
+
+PRODUCTION REVIEW
+This remains a prototype. Before public launch, add email verification, password reset,
+rate limits, report/block controls, active moderation, administrator tools, HTTPS,
+backups, monitoring and a hosted database/private object storage.
+Community currently makes optional age, gender and location fields visible to opted-in
+members. Consider removing age and gender from public profiles and minimizing shared
+personal information. Do not store production uploads indefinitely in SQLite.
