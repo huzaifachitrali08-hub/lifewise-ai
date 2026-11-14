@@ -16,7 +16,7 @@ from db import (
     list_public_users, send_direct_message, get_direct_messages,
     list_conversations, mark_direct_messages_read, unread_direct_message_count,
     send_community_message, list_community_messages,
-    delete_own_community_message, hide_community_messages_for_user,
+    delete_own_community_message, hide_community_messages_for_user, hide_direct_messages_for_user,
     add_goal, list_goals, update_goal_status, delete_goal,
     add_memory, list_memories, get_approved_memories,
     update_memory, delete_memory,
@@ -119,10 +119,17 @@ body,.stApp,[data-testid="stAppViewContainer"],[data-testid="stMain"]{color:#1d2
 [data-testid="stMarkdownContainer"],.stMarkdown,p,li,h1,h2,h3,h4,h5,h6{color:#1d2b3f}
 [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p,
 .stTextInput label,.stTextArea label,.stSelectbox label,.stRadio label,
-.stCheckbox label,.stDateInput label,.stNumberInput label{color:#334155!important;opacity:1!important}
-input,textarea,[data-baseweb="select"]>div{background:#fff!important;color:#1d2b3f!important;border-color:#cbd5e1!important}
+.stCheckbox label,.stDateInput label,.stNumberInput label,
+.stFileUploader label,.stMultiSelect label{color:#26364d!important;opacity:1!important}
+input,textarea,[data-baseweb="select"]>div,
+[data-testid="stFileUploader"] section{background:#fff!important;color:#1d2b3f!important;border-color:#cbd5e1!important}
 input::placeholder,textarea::placeholder{color:#64748b!important;opacity:1!important;-webkit-text-fill-color:#64748b!important}
-[data-baseweb="select"] *{color:#1d2b3f!important}
+[data-baseweb="select"] *,[data-baseweb="popover"] *{color:#1d2b3f!important}
+[data-testid="stRadio"] label,[data-testid="stCheckbox"] label{color:#26364d!important;opacity:1!important}
+[data-testid="stFileUploader"] small,[data-testid="stFileUploader"] span{color:#475569!important}
+[data-testid="stAlert"] *{color:#1d2b3f!important}
+div.stButton>button{color:#24364f!important;background:#fff}
+div.stButton>button[kind="primary"]{color:#fff!important}
 [data-testid="stChatInput"] textarea{background:#fff!important;color:#1d2b3f!important;-webkit-text-fill-color:#1d2b3f!important}
 [data-testid="stChatInput"] textarea::placeholder{color:#64748b!important;-webkit-text-fill-color:#64748b!important}
 button,[data-testid="stFormSubmitButton"] button{opacity:1!important}
@@ -567,6 +574,15 @@ def render_chat(messages, guest=False, user_id=None):
     # Run after all history is rendered, including after the response-triggered rerun.
     scroll_chat_to_latest()
 
+    if not guest:
+        st.divider()
+        logout_col, _ = st.columns([1, 4])
+        with logout_col:
+            if st.button("Log out", key="counselor_bottom_logout", use_container_width=True):
+                for session_key in ("user", "selected_dm_user", "direct_message_conversation"):
+                    st.session_state.pop(session_key, None)
+                st.rerun()
+
 
 def show_goals(user_id):
     st.subheader("🎯 Your goals")
@@ -789,6 +805,13 @@ def show_messages(user_id):
                 st.rerun()
         except ValueError as error:
             st.error(str(error))
+
+    st.divider()
+    st.caption("Clear this private conversation from your own account. The other person will still see their copy.")
+    if st.button("🧹 Clear chat for me", key=f"clear_private_chat_{user_id}_{selected_id}", use_container_width=True):
+        hidden_count = hide_direct_messages_for_user(user_id, selected_id)
+        st.success(f"Conversation cleared from your view ({hidden_count} message(s)).")
+        st.rerun()
 
 
 def show_profile_page(user_id):
