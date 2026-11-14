@@ -153,6 +153,22 @@ header[data-testid="stHeader"]{background:rgba(245,247,251,.92)}footer{visibilit
 .lw-metric-label{color:var(--muted);font-size:.82rem;font-weight:600}
 .lw-metric-value{color:var(--navy);font:800 1.75rem Manrope,sans-serif;margin-top:.25rem}
 .lw-subtle{color:var(--muted);font-size:.9rem}
+
+.lw-disclaimer{
+  display:flex;flex-direction:column;gap:.3rem;
+  width:100%;box-sizing:border-box;
+  padding:.9rem 1rem;margin:.25rem 0 1rem;
+  color:#243b5a!important;
+  background:#eaf2ff!important;
+  border:1px solid #b9cff5;
+  border-left:4px solid #315fce;
+  border-radius:12px;
+  font-size:.91rem;line-height:1.55;
+}
+.lw-disclaimer *{color:#243b5a!important;opacity:1!important}
+.lw-disclaimer-title{font-weight:700;color:#173b72!important}
+@media(max-width:800px){.lw-disclaimer{padding:.8rem .85rem;font-size:.88rem}}
+
 [data-testid="stChatMessage"]{border:1px solid var(--line);border-radius:16px;padding:.85rem 1rem;background:#fff;box-shadow:0 2px 10px rgba(20,43,74,.03);margin-bottom:.7rem}
 [data-testid="stChatInput"]{border:1px solid #d7e0ef;border-radius:16px;box-shadow:0 4px 16px rgba(37,76,154,.06);background:#fff}
 [data-testid="stChatInput"] textarea{font-size:1rem}
@@ -886,7 +902,15 @@ def show_registered_app(user):
     elif selected_page == "AI Counselor":
         st.markdown("### AI Counselor")
         st.caption("Ask a question, explore an idea or work through your next step.")
-        st.info("LIFEWISE AI is a guidance prototype, not a replacement for licensed medical, legal, financial or career professionals.")
+        st.markdown(
+            """
+            <div class="lw-disclaimer" role="note">
+              <span class="lw-disclaimer-title">Important note</span>
+              <span>LIFEWISE AI is a guidance prototype, not a replacement for licensed medical, legal, financial or career professionals.</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
         render_chat(recent_messages(user_id, limit=40), user_id=user_id)
     elif selected_page == "Goals":
         show_goals(user_id)
