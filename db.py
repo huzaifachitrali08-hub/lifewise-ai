@@ -128,6 +128,13 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY(message_id) REFERENCES community_messages(id) ON DELETE CASCADE
         );
+        CREATE TABLE IF NOT EXISTS direct_message_hidden (
+            user_id INTEGER NOT NULL,
+            message_id INTEGER NOT NULL,
+            PRIMARY KEY(user_id, message_id),
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(message_id) REFERENCES direct_messages(id) ON DELETE CASCADE
+        );
         """)
         # Version 7: optional file attachments for private and community messages.
         for table in ("direct_messages", "community_messages"):
@@ -319,10 +326,14 @@ def get_direct_messages(user_id, other_user_id, limit=100):
                    p.profile_photo AS sender_photo
             FROM direct_messages m
             JOIN user_profiles p ON p.user_id=m.sender_id
-            WHERE (m.sender_id=? AND m.recipient_id=?)
-               OR (m.sender_id=? AND m.recipient_id=?)
+            WHERE ((m.sender_id=? AND m.recipient_id=?)
+                OR (m.sender_id=? AND m.recipient_id=?))
+              AND NOT EXISTS (
+                SELECT 1 FROM direct_message_hidden h
+                WHERE h.message_id=m.id AND h.user_id=?
+              )
             ORDER BY m.id DESC LIMIT ?
-        """, (user_id, other_user_id, other_user_id, user_id, int(limit))).fetchall()
+        """, (user_id, other_user_id, other_user_id, user_id, user_id, int(limit))).fetchall()
         return [dict(row) for row in reversed(rows)]
 
 
@@ -334,8 +345,12 @@ def list_conversations(user_id, limit=50):
                 SELECT CASE WHEN sender_id=? THEN recipient_id ELSE sender_id END AS other_id,
                        id, content, created_at,
                        CASE WHEN sender_id=? THEN 0 ELSE 1 END AS incoming
-                FROM direct_messages
-                WHERE sender_id=? OR recipient_id=?
+                FROM direct_messages m
+                WHERE (sender_id=? OR recipient_id=?)
+                  AND NOT EXISTS (
+                    SELECT 1 FROM direct_message_hidden h
+                    WHERE h.message_id=m.id AND h.user_id=?
+                  )
             ), ranked AS (
                 SELECT *, ROW_NUMBER() OVER (PARTITION BY other_id ORDER BY id DESC) AS rn
                 FROM conversation_rows
@@ -346,7 +361,7 @@ def list_conversations(user_id, limit=50):
                       AND unread.read_at IS NULL) AS unread_count
             FROM ranked r JOIN user_profiles p ON p.user_id=r.other_id
             WHERE r.rn=1 ORDER BY r.id DESC LIMIT ?
-        """, (user_id, user_id, user_id, user_id, user_id, int(limit))).fetchall()
+        """, (user_id, user_id, user_id, user_id, user_id, user_id, int(limit))).fetchall()
         return [dict(row) for row in rows]
 
 
@@ -410,6 +425,20 @@ def hide_community_messages_for_user(user_id):
             INSERT OR IGNORE INTO community_message_hidden(user_id, message_id)
             SELECT ?, id FROM community_messages
         """, (int(user_id),))
+
+
+def hide_direct_messages_for_user(user_id, other_user_id):
+    """Hide a one-to-one conversation only for the requesting participant."""
+    with connect() as conn:
+        cursor = conn.execute(
+            """INSERT OR IGNORE INTO direct_message_hidden(user_id, message_id)
+               SELECT ?, id FROM direct_messages
+               WHERE (sender_id=? AND recipient_id=?)
+                  OR (sender_id=? AND recipient_id=?)""",
+            (int(user_id), int(user_id), int(other_user_id),
+             int(other_user_id), int(user_id))
+        )
+        return cursor.rowcount
 
 
 def mark_direct_messages_read(user_id, other_user_id):
