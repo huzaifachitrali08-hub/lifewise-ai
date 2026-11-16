@@ -1,4 +1,4 @@
-import base64
+import html
 import json
 import mimetypes
 from datetime import datetime
@@ -58,7 +58,9 @@ def prepare_attachment(uploaded_file):
         raise ValueError("The selected file is empty.")
     if len(data) > MAX_ATTACHMENT_BYTES:
         raise ValueError("Each attachment must be 10 MB or smaller.")
-    name = Path(uploaded_file.name).name
+    # Normalize both POSIX and Windows separators; uploaded names are untrusted.
+    name = str(uploaded_file.name or "upload").replace("\\", "/").split("/")[-1].strip()
+    name = name or "upload"
     extension = Path(name).suffix.lower().lstrip(".")
     if extension not in ALLOWED_ATTACHMENT_TYPES:
         raise ValueError("This file type is not supported. Choose a document, spreadsheet, presentation, image, text or ZIP file.")
@@ -89,6 +91,9 @@ def prepare_profile_photo(uploaded_file):
         raise ValueError("Please choose an image smaller than 3 MB.")
     try:
         image = Image.open(BytesIO(raw))
+        width, height = image.size
+        if width < 1 or height < 1 or width * height > 20_000_000:
+            raise ValueError("Image dimensions are too large.")
         image.verify()
         image = Image.open(BytesIO(raw)).convert("RGB")
         image.thumbnail((512, 512))
@@ -186,7 +191,18 @@ div.stButton>button[kind="primary"],div.stFormSubmitButton>button[kind="primary"
 .stRadio [role="radiogroup"] label:has(input:checked){background:#eaf0ff;border-color:#b9c9f2;color:#244aa8}
 div[data-testid="stExpander"]{border:1px solid var(--line);border-radius:13px}
 hr{border-color:var(--line)}
-@media(max-width:800px){.block-container{padding-left:.85rem;padding-right:.85rem;padding-top:.7rem}.lw-auth-hero{min-height:auto;padding:1.45rem}.lw-hero{padding:1.15rem 1.2rem;border-radius:16px}.lw-hero h2{font-size:1.3rem}.lw-auth-hero h1{font-size:1.65rem}.stRadio [role="radiogroup"]{flex-wrap:wrap}.stRadio [role="radiogroup"] label{padding:.4rem .58rem;font-size:.82rem}}
+/* Consistent control contrast, keyboard focus and touch targets. */
+input,textarea,[data-baseweb="select"]>div{min-height:2.65rem}
+input:focus,textarea:focus,[data-baseweb="select"]>div:focus-within{border-color:#315fce!important;box-shadow:0 0 0 2px rgba(49,95,206,.18)!important}
+button:focus-visible,[role="button"]:focus-visible{outline:3px solid #315fce!important;outline-offset:2px!important}
+div.stButton>button:hover,div.stFormSubmitButton>button:hover{border-color:#315fce!important;color:#173b72!important;background:#edf3ff!important}
+div.stButton>button[kind="primary"]:hover,div.stFormSubmitButton>button[kind="primary"]:hover{background:#244da9!important;color:#fff!important}
+button:disabled{opacity:.58!important;cursor:not-allowed!important}
+[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea,[data-testid="stNumberInput"] input{color:#1d2b3f!important;-webkit-text-fill-color:#1d2b3f!important}
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p{color:#26364d!important}
+[data-testid="stChatInput"] textarea{min-height:3rem}
+@media(max-width:800px){.block-container{padding-left:.85rem;padding-right:.85rem;padding-top:.7rem}.lw-auth-hero{min-height:auto;padding:1.45rem}.lw-hero{padding:1.15rem 1.2rem;border-radius:16px}.lw-hero h2{font-size:1.3rem}.lw-auth-hero h1{font-size:1.65rem}.stRadio [role="radiogroup"]{flex-wrap:wrap;gap:.35rem}.stRadio [role="radiogroup"] label{padding:.4rem .58rem;font-size:.82rem;min-height:2.45rem}.lw-card{padding:.9rem}.stButton>button,.stFormSubmitButton>button{min-height:2.8rem}}
+@media(max-width:420px){.block-container{padding-left:.65rem;padding-right:.65rem}.lw-status{font-size:.7rem;padding:.35rem .5rem}.lw-auth-panel{padding:1rem}.stRadio [role="radiogroup"] label{font-size:.76rem;padding:.35rem .45rem}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -491,7 +507,14 @@ def scroll_chat_to_latest():
 
 def render_copy_button(content, key):
     """Show a compact copy control for an assistant response."""
-    safe_content = json.dumps(str(content))
+    # Escape HTML-sensitive characters as well as JSON quotes so AI text cannot
+    # terminate the inline script element when rendered by the browser.
+    safe_content = (json.dumps(str(content))
+                    .replace("<", "\\u003c")
+                    .replace(">", "\\u003e")
+                    .replace("&", "\\u0026")
+                    .replace("\u2028", "\\u2028")
+                    .replace("\u2029", "\\u2029"))
     st.html(f"""
     <div style="display:flex;justify-content:flex-end;margin-top:-.35rem;margin-bottom:.55rem">
       <button id="copy-{key}" type="button"
@@ -861,7 +884,7 @@ def show_overview(user_id, email):
     unread = unread_direct_message_count(user_id)
     active = sum(1 for g in goals if str(g.get("status", "")).lower() not in ("completed", "done"))
     completed = len(goals) - active
-    first_name = (profile.get("name") or "there").strip().split()[0]
+    first_name = html.escape((profile.get("name") or "there").strip().split()[0])
     st.markdown(f'<div class="lw-hero"><h2>Welcome back, {first_name}.</h2><p>Your personal growth workspace. Choose one small step and make today count.</p></div>', unsafe_allow_html=True)
     st.markdown("### Your workspace")
     st.caption("A quick view of your progress and the tools available to you.")
@@ -878,7 +901,10 @@ def show_overview(user_id, email):
         st.markdown("### Recent goals")
         if goals:
             for goal in goals[:5]:
-                st.markdown(f'<div class="lw-card"><b>{goal.get("title", "Untitled goal")}</b><br><span class="lw-subtle">{goal.get("area", "General")} · {goal.get("status") or "In progress"}</span></div>', unsafe_allow_html=True)
+                goal_title = html.escape(str(goal.get("title", "Untitled goal")))
+                goal_area = html.escape(str(goal.get("area", "General")))
+                goal_status = html.escape(str(goal.get("status") or "In progress"))
+                st.markdown(f'<div class="lw-card"><b>{goal_title}</b><br><span class="lw-subtle">{goal_area} · {goal_status}</span></div>', unsafe_allow_html=True)
         else:
             st.info("You haven't added a goal yet. Open Goals to create your first one.")
         st.caption(f"Signed in as {email}")
