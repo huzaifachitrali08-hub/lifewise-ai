@@ -18,18 +18,23 @@ from db import (
     send_community_message, list_community_messages,
     delete_own_community_message, hide_community_messages_for_user, hide_direct_messages_for_user,
     add_goal, list_goals, update_goal_status, delete_goal,
+    add_goal_actions, list_goal_actions, update_goal_action_status,
+    add_custom_goal_action, delete_goal_action,
+    save_goal_coach_message, list_goal_coach_messages, clear_goal_coach_messages,
     add_memory, list_memories, get_approved_memories,
     update_memory, delete_memory,
     save_message, recent_messages, clear_chat
 )
 from counselor import get_counselor_reply
+from action_engine import build_action_plan, build_smart_action_plan, detect_goal_type, calculate_progress
+import pandas as pd
 from streamlit_autorefresh import st_autorefresh
 
 load_dotenv()
 init_db()
 
 st.set_page_config(
-    page_title="LIFEWISE AI | Personal AI Counselor",
+    page_title="LIFEWISE AI V15 | Intelligent Goal Planner",
     page_icon="🧭",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -158,6 +163,11 @@ header[data-testid="stHeader"]{background:rgba(245,247,251,.92)}footer{visibilit
 .lw-metric-label{color:var(--muted);font-size:.82rem;font-weight:600}
 .lw-metric-value{color:var(--navy);font:800 1.75rem Manrope,sans-serif;margin-top:.25rem}
 .lw-subtle{color:var(--muted);font-size:.9rem}
+.lw-goal-next{background:linear-gradient(115deg,#eef4ff,#f7faff);border:1px solid #cbdaf8;border-left:5px solid #315fce;border-radius:16px;padding:1rem 1.1rem;margin:.8rem 0 1rem}
+.lw-goal-next-title{font:700 1.02rem Manrope,sans-serif;color:#173b72!important;margin-bottom:.25rem}
+.lw-phase-label{font-weight:700;color:#243b5a!important}
+.lw-action-card{border:1px solid #dce5f1;border-radius:13px;background:#fff;padding:.75rem .85rem;margin:.45rem 0}
+.lw-goal-intro{color:#52657e!important;font-size:.94rem;line-height:1.6}
 
 .lw-disclaimer{
   display:flex;flex-direction:column;gap:.3rem;
@@ -203,6 +213,7 @@ button:disabled{opacity:.58!important;cursor:not-allowed!important}
 [data-testid="stChatInput"] textarea{min-height:3rem}
 @media(max-width:800px){.block-container{padding-left:.85rem;padding-right:.85rem;padding-top:.7rem}.lw-auth-hero{min-height:auto;padding:1.45rem}.lw-hero{padding:1.15rem 1.2rem;border-radius:16px}.lw-hero h2{font-size:1.3rem}.lw-auth-hero h1{font-size:1.65rem}.stRadio [role="radiogroup"]{flex-wrap:wrap;gap:.35rem}.stRadio [role="radiogroup"] label{padding:.4rem .58rem;font-size:.82rem;min-height:2.45rem}.lw-card{padding:.9rem}.stButton>button,.stFormSubmitButton>button{min-height:2.8rem}}
 @media(max-width:420px){.block-container{padding-left:.65rem;padding-right:.65rem}.lw-status{font-size:.7rem;padding:.35rem .5rem}.lw-auth-panel{padding:1rem}.stRadio [role="radiogroup"] label{font-size:.76rem;padding:.35rem .45rem}}
+@media(max-width:800px){[data-testid="stTabs"] [role="tablist"]{gap:.2rem;overflow-x:auto;flex-wrap:nowrap}[data-testid="stTabs"] button{white-space:nowrap;font-size:.82rem;padding:.55rem .65rem}.lw-goal-next{padding:.85rem}.lw-action-card{padding:.7rem}.stMetric{padding:.55rem!important}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -623,33 +634,288 @@ def render_chat(messages, guest=False, user_id=None):
                 st.rerun()
 
 
-def show_goals(user_id):
-    st.subheader("🎯 Your goals")
-    with st.form("goal_form", clear_on_submit=True):
-        title = st.text_input("Goal")
-        area = st.selectbox(
-            "Area", ["Career", "Study", "Business", "Personal development", "Other"]
-        )
-        submitted = st.form_submit_button("Add goal", type="primary")
-    if submitted:
-        if title.strip():
-            add_goal(user_id, title, area)
-            st.rerun()
+def render_goal_analytics(goal, actions, progress):
+    """Visual summaries are calculated from this goal's saved action records."""
+    st.markdown("#### 📊 Your progress at a glance")
+    status_df = pd.DataFrame({
+        "Action status": ["Completed", "In progress", "Pending"],
+        "Actions": [progress["completed"], progress["in_progress"], progress["pending"]],
+    }).set_index("Action status")
+    left, right = st.columns(2)
+    with left:
+        st.markdown("**Action status**")
+        st.bar_chart(status_df, height=230)
+    with right:
+        st.markdown("**Progress by phase**")
+        phase_rows = []
+        for phase in dict.fromkeys(a["phase"] for a in actions):
+            items = [a for a in actions if a["phase"] == phase]
+            phase_rows.append({
+                "Phase": phase.split("·", 1)[-1].strip(),
+                "Completed": sum(a["status"] == "Completed" for a in items),
+                "Remaining": sum(a["status"] != "Completed" for a in items),
+            })
+        if phase_rows:
+            st.bar_chart(pd.DataFrame(phase_rows).set_index("Phase"), height=230)
         else:
-            st.warning("Please enter a goal.")
+            st.info("Your phase chart will appear when actions are added.")
 
-    for goal in list_goals(user_id):
-        cols = st.columns([4, 2, 2, 1])
-        cols[0].write(f"**{goal['title']}**")
-        cols[1].write(goal["area"])
-        if goal["status"] == "Completed":
-            cols[2].success("Completed")
-        elif cols[2].button("Mark complete", key=f"complete_{goal['id']}"):
-            update_goal_status(user_id, goal["id"], "Completed")
+    completed_dates = []
+    for action in actions:
+        stamp = action.get("completed_at")
+        if action.get("status") == "Completed" and stamp:
+            try:
+                completed_dates.append(datetime.fromisoformat(stamp).date())
+            except (TypeError, ValueError):
+                pass
+    if completed_dates:
+        daily = {}
+        for day in sorted(completed_dates):
+            daily[day.isoformat()] = daily.get(day.isoformat(), 0) + 1
+        cumulative = 0
+        trend_rows = []
+        for day, count in sorted(daily.items()):
+            cumulative += count
+            trend_rows.append({"Date": day, "Completed actions": cumulative})
+        st.markdown("**Completion trend**")
+        st.line_chart(pd.DataFrame(trend_rows).set_index("Date"), height=190)
+    else:
+        st.caption("Your completion trend will appear after you complete actions.")
+
+    target = goal.get("target_date")
+    if target:
+        try:
+            days_left = (datetime.fromisoformat(target).date() - datetime.now().date()).days
+            if days_left < 0:
+                st.warning(f"Your target date passed {abs(days_left)} day(s) ago. You can update your plan or target date.")
+            elif days_left == 0:
+                st.info("Your target date is today. Focus on the most important unfinished action.")
+            else:
+                st.caption(f"📅 {days_left} days until your target date")
+        except ValueError:
+            pass
+
+
+def show_goal_coach(user_id, goal, actions, progress):
+    st.markdown("#### 💬 Your personal Goal Coach")
+    st.caption("This private coach uses the selected goal and its saved action plan to help you choose practical next steps.")
+    messages = list_goal_coach_messages(user_id, goal["id"], limit=30)
+    if not messages:
+        st.info("Try: ‘What should I do today?’ or ‘Help me break my next action into smaller steps.’")
+    for index, message in enumerate(messages):
+        with st.chat_message(message["role"], avatar="🙂" if message["role"] == "user" else "🧭"):
+            st.markdown(message["content"])
+
+    prompt = st.chat_input("Ask about this goal, your next action or your progress…", key=f"goal_coach_input_{goal['id']}")
+    if prompt:
+        save_goal_coach_message(user_id, goal["id"], "user", prompt)
+        with st.spinner("Your Goal Coach is thinking…"):
+            try:
+                profile = get_profile(user_id)
+                goal_context = {
+                    "title": goal.get("title"), "area": goal.get("area"),
+                    "target_date": goal.get("target_date"),
+                    "weekly_hours": goal.get("weekly_hours"),
+                    "starting_point": goal.get("starting_point"),
+                    "success_measure": goal.get("success_measure"),
+                    "plan_mode": goal.get("plan_mode"),
+                    "assessment_context": goal.get("assessment_context"),
+                    "status": goal.get("status"),
+                    "progress": progress,
+                    "actions": [{"title": a["title"], "phase": a["phase"],
+                                 "description": a["description"], "due_date": a.get("due_date"),
+                                 "status": a["status"]} for a in actions],
+                }
+                history = list_goal_coach_messages(user_id, goal["id"], limit=12)
+                reply = get_counselor_reply(
+                    prompt,
+                    profile=profile,
+                    memories=[],
+                    goals=[goal_context],
+                    conversation_history=history[:-1],
+                    goal_coach=True,
+                )
+                save_goal_coach_message(user_id, goal["id"], "assistant", reply)
+            except Exception as error:
+                st.error("I couldn't process that message. Please try again.")
+                return
+        st.rerun()
+
+    if messages:
+        if st.button("Clear this goal's chat", key=f"clear_goal_chat_{goal['id']}"):
+            clear_goal_coach_messages(user_id, goal["id"])
             st.rerun()
-        if cols[3].button("Delete", key=f"delete_goal_{goal['id']}"):
-            delete_goal(user_id, goal["id"])
-            st.rerun()
+
+
+def show_goals(user_id):
+    st.subheader("🎯 Goal-to-Action workspace")
+    st.caption("Turn an ambition into a plan, see your progress visually, and get help from a coach dedicated to each goal.")
+    with st.expander("＋ Create a goal and action plan", expanded=not bool(list_goals(user_id))):
+        with st.form("goal_form_v15", clear_on_submit=True):
+            plan_mode = st.radio("How would you like to plan?", ["AI Smart Plan", "Manual Plan"], horizontal=True,
+                                 help="AI Smart Plan assesses the goal and creates goal-specific milestones. Manual Plan gives you a blank workspace to build yourself.")
+            title = st.text_input("What do you want to achieve?", placeholder="Example: Become a doctor")
+            area = st.selectbox("Goal area", ["Career", "Study", "Business", "Personal development", "Health and fitness", "Other"])
+            detected = detect_goal_type(title, area)
+            default_years = 7 if detected == "medical_career" else 2 if detected in ("data_science", "software_career", "business") else 1
+            if plan_mode == "AI Smart Plan":
+                st.info("The counselor will identify the type and complexity of your goal, use your starting situation, and create staged milestones. You can review and edit every action.")
+                country = st.text_input("Country or education system", placeholder="Example: Pakistan")
+                education = st.text_input("Current education or qualification", placeholder="Example: Matric, FSc pre-medical, bachelor's degree")
+                current_situation = st.text_area("Tell the counselor about your current situation", placeholder="What have you completed? What are you doing now? Any constraints or important details?", height=90)
+            else:
+                country, education, current_situation = "", "", ""
+                st.caption("Manual mode does not generate tasks automatically. Create your own stages and actions after saving the goal.")
+            suggested_date = datetime.now().date() + __import__("datetime").timedelta(days=round(default_years * 365.25) if plan_mode == "AI Smart Plan" else 90)
+            target_date = st.date_input("Target date / planning horizon", value=suggested_date, min_value=datetime.now().date())
+            weekly_hours = st.slider("Time you can give each week", 1, 40, 5)
+            starting_point = st.selectbox("Your current starting point", ["Beginner", "Some experience", "Intermediate", "Advanced"])
+            success_measure = st.text_input("How will you know you succeeded?", placeholder="Example: Meet official medical admission and licensing requirements")
+            submitted = st.form_submit_button("Create my goal workspace", type="primary", use_container_width=True)
+        if submitted:
+            if not title.strip():
+                st.error("Please enter a goal.")
+            elif plan_mode == "AI Smart Plan" and detected == "medical_career" and not country.strip():
+                st.error("Please enter the country where you plan to study or practise so the roadmap can account for the correct medical pathway.")
+            else:
+                try:
+                    generated = []
+                    if plan_mode == "AI Smart Plan":
+                        roadmap = build_smart_action_plan(
+                            title, area, target_date, weekly_hours, starting_point,
+                            success_measure, country, education, current_situation
+                        )
+                        generated = roadmap["actions"]
+                        plan_note = roadmap["planning_note"]
+                        goal_type = roadmap["goal_type"]
+                        assessment_context = "Country: " + country + "\nEducation: " + education + "\nCurrent situation: " + current_situation + "\nGoal type: " + goal_type
+                    else:
+                        plan_note = "Manual plan: add your own stages and actions in the Action plan tab."
+                        assessment_context = ""
+                    goal_id = add_goal(
+                        user_id, title, area, target_date.isoformat(), weekly_hours,
+                        starting_point, success_measure, plan_mode, assessment_context
+                    )
+                    if generated:
+                        add_goal_actions(user_id, goal_id, generated)
+                        st.success(f"Your goal roadmap has been saved with {len(generated)} goal-specific actions. {plan_note}")
+                    else:
+                        st.success("Your manual goal workspace has been created. Open Action plan to add your own stages and actions.")
+                    st.rerun()
+                except ValueError as error:
+                    st.error(str(error))
+
+    goals = list_goals(user_id)
+    if not goals:
+        st.info("Your workspace is ready. Create your first goal above to generate an action plan.")
+        return
+
+    active_goals = [g for g in goals if g.get("status") != "Completed"]
+    if active_goals:
+        st.markdown("#### Your active goals")
+        st.caption("Choose a goal to open its charts, action plan and private Goal Coach.")
+
+    for goal in goals:
+        actions = list_goal_actions(user_id, goal["id"])
+        progress = calculate_progress(actions)
+        with st.container(border=True):
+            head_left, head_right = st.columns([4, 1])
+            with head_left:
+                st.markdown(f"### {goal['title']}")
+                target_label = goal.get("target_date") or "No target date"
+                st.caption(f"{goal['area']} · Target: {target_label} · {goal.get('weekly_hours', 5)} hrs/week · {goal.get('starting_point', 'Beginner')} · {goal.get('plan_mode', 'Manual')}")
+            with head_right:
+                if goal["status"] == "Completed":
+                    st.success("Goal complete")
+                elif st.button("Complete goal", key=f"goal_done_{goal['id']}"):
+                    update_goal_status(user_id, goal["id"], "Completed")
+                    st.rerun()
+            st.progress(progress["percent"] / 100, text=f"{progress['percent']}% complete · {progress['completed']}/{progress['total']} actions")
+            metric_cols = st.columns(4)
+            for col, label, value in zip(metric_cols, ["Completed", "In progress", "Pending", "Total"], [progress["completed"], progress["in_progress"], progress["pending"], progress["total"]]):
+                col.metric(label, value)
+            if goal.get("success_measure"):
+                st.caption("Success measure: " + goal["success_measure"])
+
+            view_key = f"goal_workspace_view_{goal['id']}"
+            workspace_view = st.radio(
+                "Choose your workspace",
+                ["📊 Visual dashboard", "🗂️ Action plan", "💬 Goal Coach"],
+                horizontal=True, key=view_key, label_visibility="collapsed"
+            )
+            next_action = next((a for a in actions if a.get("status") != "Completed"), None)
+            if next_action and goal.get("status") != "Completed":
+                st.markdown(
+                    '<div class="lw-goal-next"><div class="lw-goal-next-title">✨ Your next best step</div>'
+                    + '<div style="font-weight:700;color:#1d2b3f">' + html.escape(next_action["title"]) + '</div>'
+                    + '<div style="color:#52657e;font-size:.88rem;margin:.25rem 0">' + html.escape(next_action.get("description", "")) + '</div>'
+                    + '<div style="color:#315fce;font-size:.82rem;font-weight:650">' + html.escape(next_action.get("phase", "")) + ' · Due ' + html.escape(next_action.get("due_date") or "Not set") + '</div></div>',
+                    unsafe_allow_html=True
+                )
+                if next_action.get("status") == "Pending":
+                    if st.button("▶ Start this action", key=f"start_next_{next_action['id']}", type="primary"):
+                        update_goal_action_status(user_id, next_action["id"], "In Progress")
+                        st.rerun()
+                elif next_action.get("status") == "In Progress":
+                    if st.button("✓ Mark this action complete", key=f"complete_next_{next_action['id']}", type="primary"):
+                        update_goal_action_status(user_id, next_action["id"], "Completed")
+                        st.rerun()
+            if workspace_view == "📊 Visual dashboard":
+                render_goal_analytics(goal, actions, progress)
+            elif workspace_view == "🗂️ Action plan":
+                if actions:
+                    phases = list(dict.fromkeys(x["phase"] for x in actions))
+                    for phase in phases:
+                        phase_actions = [x for x in actions if x["phase"] == phase]
+                        with st.expander(f"{phase} · {sum(x['status'] == 'Completed' for x in phase_actions)}/{len(phase_actions)} done"):
+                            for action in phase_actions:
+                                with st.container(border=True):
+                                    c1, c2 = st.columns([3, 2])
+                                    with c1:
+                                        st.markdown(f"**{action['title']}**")
+                                        st.caption(action["description"])
+                                        st.caption("📅 Due: " + (action.get("due_date") or "Not set"))
+                                    with c2:
+                                        status_options = ["Pending", "In Progress", "Completed"]
+                                        current = action["status"] if action["status"] in status_options else "Pending"
+                                        new_status = st.selectbox("Action status", status_options, index=status_options.index(current), key=f"action_status_{action['id']}")
+                                        if new_status != current:
+                                            update_goal_action_status(user_id, action["id"], new_status)
+                                            st.rerun()
+                                        if st.button("Delete action", key=f"action_delete_{action['id']}", use_container_width=True):
+                                            delete_goal_action(user_id, action["id"])
+                                            st.rerun()
+                else:
+                    st.warning("This goal has no actions yet. Add your own actions, or create a new AI Smart Plan for a goal-specific roadmap.")
+                    if st.button("Generate a 12-action starter plan", key=f"generate_existing_{goal['id']}", type="primary"):
+                        from datetime import date, timedelta
+                        deadline = date.fromisoformat(goal["target_date"]) if goal.get("target_date") else date.today() + timedelta(days=90)
+                        generated = build_action_plan(goal["title"], goal["area"], deadline, goal.get("weekly_hours", 5), goal.get("starting_point", "Beginner"), goal.get("success_measure", ""))
+                        add_goal_actions(user_id, goal["id"], generated)
+                        st.rerun()
+                with st.expander("＋ Add my own action"):
+                    with st.form(f"custom_action_{goal['id']}", clear_on_submit=True):
+                        custom_phase = st.text_input("Stage / milestone", value="My actions", key=f"custom_phase_{goal['id']}")
+                        custom_title = st.text_input("Action title", key=f"custom_title_{goal['id']}")
+                        custom_description = st.text_input("What will you do?", key=f"custom_desc_{goal['id']}")
+                        custom_due = st.date_input("Due date", value=datetime.now().date() + __import__("datetime").timedelta(days=7), key=f"custom_due_{goal['id']}")
+                        custom_submit = st.form_submit_button("Save action")
+                    if custom_submit:
+                        try:
+                            add_custom_goal_action(user_id, goal["id"], custom_title, custom_description, custom_due.isoformat(), custom_phase)
+                            st.rerun()
+                        except ValueError as error:
+                            st.error(str(error))
+            elif workspace_view == "💬 Goal Coach":
+                show_goal_coach(user_id, goal, actions, progress)
+
+            footer_cols = st.columns([1, 1, 3])
+            if goal["status"] != "Completed" and footer_cols[0].button("Mark goal active", key=f"goal_active_{goal['id']}"):
+                update_goal_status(user_id, goal["id"], "Active")
+                st.rerun()
+            if footer_cols[1].button("Delete goal", key=f"delete_goal_{goal['id']}"):
+                delete_goal(user_id, goal["id"])
+                st.rerun()
 
 
 def show_community(user_id):

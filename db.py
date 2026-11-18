@@ -76,6 +76,47 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_user_messages_user
             ON user_messages(user_id, id);
         """)
+        goal_columns = {row["name"] for row in conn.execute("PRAGMA table_info(user_goals)").fetchall()}
+        for column, definition in (
+            ("target_date", "TEXT"),
+            ("weekly_hours", "INTEGER NOT NULL DEFAULT 5"),
+            ("starting_point", "TEXT NOT NULL DEFAULT 'Beginner'"),
+            ("success_measure", "TEXT NOT NULL DEFAULT ''"),
+            ("plan_mode", "TEXT NOT NULL DEFAULT 'Manual'"),
+            ("assessment_context", "TEXT NOT NULL DEFAULT ''"),
+        ):
+            if column not in goal_columns:
+                conn.execute(f"ALTER TABLE user_goals ADD COLUMN {column} {definition}")
+        conn.executescript("""
+        CREATE TABLE IF NOT EXISTS goal_actions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            goal_id INTEGER NOT NULL,
+            phase TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            due_date TEXT,
+            status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending','In Progress','Completed')),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            completed_at TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(goal_id) REFERENCES user_goals(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_goal_actions_owner_goal
+            ON goal_actions(user_id, goal_id, due_date, id);
+        CREATE TABLE IF NOT EXISTS goal_coach_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            goal_id INTEGER NOT NULL,
+            role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(goal_id) REFERENCES user_goals(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_goal_coach_owner_goal
+            ON goal_coach_messages(user_id, goal_id, id);
+        """)
         columns = {
             row["name"] for row in conn.execute("PRAGMA table_info(users)").fetchall()
         }
@@ -529,15 +570,22 @@ def delete_memory(user_id, memory_id):
 
 
 # GOALS
-def add_goal(user_id, title, area):
+def add_goal(user_id, title, area, target_date=None, weekly_hours=5,
+             starting_point="Beginner", success_measure="", plan_mode="Manual", assessment_context=""):
     title = title.strip()
     if not title:
         raise ValueError("Goal cannot be empty.")
+    weekly_hours = max(1, min(int(weekly_hours), 40))
     with connect() as conn:
-        conn.execute(
-            "INSERT INTO user_goals(user_id, title, area) VALUES (?, ?, ?)",
-            (user_id, title, area)
+        cursor = conn.execute(
+            """INSERT INTO user_goals
+               (user_id, title, area, target_date, weekly_hours, starting_point,
+                success_measure, plan_mode, assessment_context)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, title, area, target_date, weekly_hours, starting_point,
+             success_measure.strip(), plan_mode, assessment_context.strip())
         )
+        return cursor.lastrowid
 
 
 def list_goals(user_id):
@@ -591,3 +639,113 @@ def recent_messages(user_id, limit=30):
 def clear_chat(user_id):
     with connect() as conn:
         conn.execute("DELETE FROM user_messages WHERE user_id=?", (user_id,))
+
+
+# GOAL-TO-ACTION ENGINE
+# Every operation is scoped to the signed-in user as well as the goal/action ID.
+def add_goal_actions(user_id, goal_id, actions):
+    with connect() as conn:
+        owned = conn.execute(
+            "SELECT id FROM user_goals WHERE id=? AND user_id=?",
+            (goal_id, user_id)
+        ).fetchone()
+        if not owned:
+            raise ValueError("Goal not found for this account.")
+        conn.executemany(
+            """INSERT INTO goal_actions
+               (user_id, goal_id, phase, title, description, due_date)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            [(user_id, goal_id, a["phase"], a["title"],
+              a.get("description", ""), a.get("due_date")) for a in actions]
+        )
+        return len(actions)
+
+
+def list_goal_actions(user_id, goal_id):
+    with connect() as conn:
+        rows = conn.execute(
+            """SELECT * FROM goal_actions
+               WHERE user_id=? AND goal_id=?
+               ORDER BY CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date, id""",
+            (user_id, goal_id)
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def update_goal_action_status(user_id, action_id, status):
+    if status not in ("Pending", "In Progress", "Completed"):
+        raise ValueError("Invalid action status.")
+    with connect() as conn:
+        cur = conn.execute(
+            """UPDATE goal_actions
+               SET status=?, completed_at=CASE WHEN ?='Completed' THEN CURRENT_TIMESTAMP ELSE NULL END
+               WHERE id=? AND user_id=?""",
+            (status, status, action_id, user_id)
+        )
+        return cur.rowcount > 0
+
+
+def add_custom_goal_action(user_id, goal_id, title, description="", due_date=None, phase="My actions"):
+    title = title.strip()
+    if not title:
+        raise ValueError("Action title cannot be empty.")
+    with connect() as conn:
+        owned = conn.execute(
+            "SELECT id FROM user_goals WHERE id=? AND user_id=?", (goal_id, user_id)
+        ).fetchone()
+        if not owned:
+            raise ValueError("Goal not found for this account.")
+        cur = conn.execute(
+            """INSERT INTO goal_actions
+               (user_id, goal_id, phase, title, description, due_date)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, goal_id, phase.strip() or "My actions", title, description.strip(), due_date)
+        )
+        return cur.lastrowid
+
+
+def delete_goal_action(user_id, action_id):
+    with connect() as conn:
+        cur = conn.execute(
+            "DELETE FROM goal_actions WHERE id=? AND user_id=?", (action_id, user_id)
+        )
+        return cur.rowcount > 0
+
+
+# GOAL COACH CHAT — messages are private to the signed-in user and selected goal.
+def save_goal_coach_message(user_id, goal_id, role, content):
+    if role not in ("user", "assistant"):
+        raise ValueError("Invalid message role.")
+    content = str(content or "").strip()
+    if not content:
+        raise ValueError("Message cannot be empty.")
+    with connect() as conn:
+        owned = conn.execute(
+            "SELECT id FROM user_goals WHERE id=? AND user_id=?", (goal_id, user_id)
+        ).fetchone()
+        if not owned:
+            raise ValueError("Goal not found for this account.")
+        conn.execute(
+            "INSERT INTO goal_coach_messages(user_id, goal_id, role, content) VALUES (?, ?, ?, ?)",
+            (user_id, goal_id, role, content)
+        )
+
+def list_goal_coach_messages(user_id, goal_id, limit=30):
+    with connect() as conn:
+        owned = conn.execute(
+            "SELECT id FROM user_goals WHERE id=? AND user_id=?", (goal_id, user_id)
+        ).fetchone()
+        if not owned:
+            return []
+        rows = conn.execute(
+            "SELECT role, content, created_at FROM goal_coach_messages WHERE user_id=? AND goal_id=? ORDER BY id DESC LIMIT ?",
+            (user_id, goal_id, int(limit))
+        ).fetchall()
+        return [dict(row) for row in reversed(rows)]
+
+def clear_goal_coach_messages(user_id, goal_id):
+    with connect() as conn:
+        conn.execute(
+            "DELETE FROM goal_coach_messages WHERE user_id=? AND goal_id=?",
+            (user_id, goal_id)
+        )
