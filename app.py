@@ -537,6 +537,16 @@ color:#1d2b3f !important;
 -webkit-text-fill-color:#1d2b3f !important;
 opacity:1 !important;
 }
+[data-testid="stButton"] button, .stButton > button {
+background:#2f6fed !important;
+background-color:#2f6fed !important;
+border:1px solid #2f6fed !important;
+}
+[data-testid="stButton"] button *, .stButton > button * {
+color:#ffffff !important;
+-webkit-text-fill-color:#ffffff !important;
+opacity:1 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
