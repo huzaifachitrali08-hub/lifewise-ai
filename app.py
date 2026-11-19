@@ -574,6 +574,15 @@ div.stFormSubmitButton > button * {
   -webkit-text-fill-color: #ffffff !important;
   opacity: 1 !important;
 }
+/* HIDE FORK / GITHUB / 3 DOTS */
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stAppDeployButton"],
+[data-testid="stStatusWidget"],
+[data-testid="stMainMenu"] {
+  display: none !important;
+  visibility: hidden !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
