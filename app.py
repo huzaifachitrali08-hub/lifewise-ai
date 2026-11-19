@@ -509,7 +509,12 @@ color:#ffffff !important;
 -webkit-text-fill-color:#ffffff !important;
 opacity:1 !important;
 }
-
+.stButton > button, .stButton > button p, .stButton > button div, .stButton > button span,
+.stFormSubmitButton > button, .stFormSubmitButton > button p, .stFormSubmitButton > button div, .stFormSubmitButton > button span {
+color:#ffffff !important;
+-webkit-text-fill-color:#ffffff !important;
+opacity:1 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
