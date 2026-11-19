@@ -988,7 +988,7 @@ def render_chat(messages, guest=False, user_id=None):
         st.divider()
         logout_col, _ = st.columns([1, 4])
         with logout_col:
-            if st.button("Log out", key="counselor_bottom_logout", use_container_width=True):
+            if st.button("Log out", key="counselor_bottom_logout", use_container_width=True, type="primary"):
                 for session_key in ("user", "selected_dm_user", "direct_message_conversation"):
                     st.session_state.pop(session_key, None)
                 st.rerun()
