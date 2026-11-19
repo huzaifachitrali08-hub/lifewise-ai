@@ -115,7 +115,14 @@ def display_name(user_row):
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
-
+/* FIX FOR BLACK BOXES */
+[data-testid="stAlert"], [data-testid="stInfo"], [data-testid="stWarning"], [data-testid="stSuccess"]{
+  background:#eaf2ff !important; color:#1d2b3f !important; border:1px solid #b9cff5 !important;
+}
+[data-testid="stAlert"] *, [data-testid="stInfo"] *, [data-testid="stWarning"] *{ color:#1d2b3f !important; }
+[data-testid="stPlotlyChart"], [data-testid="stVegaLiteChart"], .js-plotly-plot{
+  background:#ffffff !important; border:1px solid #e2e8f0; border-radius:16px; padding:8px;
+}
 :root{
   color-scheme: light !important;
   --navy:#172f54; --blue:#315fce; --blue-light:#eaf0ff;
