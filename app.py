@@ -119,9 +119,9 @@ st.markdown("""
    page backgrounds but left Streamlit's dark-theme text/widget variables intact. */
 :root{
   color-scheme:light !important;
-  --navy:#172f54;--blue:#315fce;--ink:#1d2b3f;--muted:#596b82;--line:#dce3ed;
+  --navy:#93c5fd;--blue:#60a5fa;--ink:#1d2b3f;--muted:#596b82;--line:#dce3ed;
   --text-color:#1d2b3f;--background-color:#f5f7fb;
-  --secondary-background-color:#ffffff;--primary-color:#315fce;
+  --secondary-background-color:#ffffff;--primary-color:#60a5fa;
   --code-background-color:#eef2f8;
 }
 html,body,[class*="css"]{font-family:'DM Sans',sans-serif;color:#1d2b3f}
