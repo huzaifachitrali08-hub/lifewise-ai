@@ -583,6 +583,25 @@ div.stFormSubmitButton > button * {
   display: none !important;
   visibility: hidden !important;
 }
+/* REMOVE TOP SPACE */
+.block-container {
+  padding-top: 0rem !important;
+  padding-bottom: 0rem !important;
+  margin-top: 0rem !important;
+}
+header[data-testid="stHeader"] {
+  height: 0rem !important;
+  background: transparent !important;
+}
+div[data-testid="stAppViewContainer"] > div:first-child {
+  padding-top: 0rem !important;
+}
+div[data-testid="stImage"] {
+  margin-top: -10px !important;
+  margin-bottom: -10px !important;
+  padding-top: 0px !important;
+  padding-bottom: 0px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
