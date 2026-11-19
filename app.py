@@ -548,6 +548,24 @@ color:#ffffff !important;
 -webkit-text-fill-color:#ffffff !important;
 opacity:1 !important;
 }
+/* FIX LOG IN BUTTON ONLY */
+[data-testid="stFormSubmitButton"] button,
+div.stFormSubmitButton > button,
+div.stFormSubmitButton > button[kind="primaryFormSubmit"],
+div.stFormSubmitButton > button[kind="primary"] {
+  background: #315fce !important;
+  background-color: #315fce !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: 1px solid #315fce !important;
+  opacity: 1 !important;
+}
+[data-testid="stFormSubmitButton"] button *,
+div.stFormSubmitButton > button * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  opacity: 1 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
