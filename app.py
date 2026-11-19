@@ -921,7 +921,7 @@ def render_chat(messages, guest=False, user_id=None):
     st.caption("Your message box stays at the bottom. New replies appear at the latest point in the conversation.")
     top_left, top_right = st.columns([5, 1])
     with top_right:
-        if st.button("＋ New chat", use_container_width=True):
+        if st.button("＋ New chat", use_container_width=True, type="primary"):
             if guest:
                 st.session_state["guest_messages"] = []
             else:
