@@ -35,7 +35,7 @@ init_db()
 
 st.set_page_config(
     page_title="LIFEWISE AI V15 | Intelligent Goal Planner",
-    page_icon="🧭",
+    page_icon="🧠",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
