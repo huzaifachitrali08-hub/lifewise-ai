@@ -538,15 +538,23 @@ color:#1d2b3f !important;
 -webkit-text-fill-color:#1d2b3f !important;
 opacity:1 !important;
 }
-[data-testid="stButton"] button, .stButton > button {
-background:#2f6fed !important;
-background-color:#2f6fed !important;
-border:1px solid #2f6fed !important;
+/* FIX LOG IN BUTTON ONLY */
+[data-testid="stFormSubmitButton"] button,
+div.stFormSubmitButton > button,
+div.stFormSubmitButton > button[kind="primaryFormSubmit"],
+div.stFormSubmitButton > button[kind="primary"] {
+  background: #315fce !important;
+  background-color: #315fce !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: 1px solid #315fce !important;
+  opacity: 1 !important;
 }
-[data-testid="stButton"] button *, .stButton > button * {
-color:#ffffff !important;
--webkit-text-fill-color:#ffffff !important;
-opacity:1 !important;
+[data-testid="stFormSubmitButton"] button *,
+div.stFormSubmitButton > button * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  opacity: 1 !important;
 }
 /* FIX LOG IN BUTTON ONLY */
 [data-testid="stFormSubmitButton"] button,
