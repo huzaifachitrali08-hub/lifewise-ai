@@ -1292,10 +1292,9 @@ def show_goals(user_id):
                 show_goal_coach(user_id, goal, actions, progress)
 
             footer_cols = st.columns([1, 1, 3])
-            if goal["status"] != "Completed" and footer_cols[0].button("Mark goal active", key=f"goal_active_{goal['id']}"):
+            if goal["status"] != "Completed" and footer_cols[0].button("Mark goal active",type="primary", key=f"goal_active_{goal['id']}"):
                 update_goal_status(user_id, goal["id"], "Active")
                 st.rerun()
-            if footer_cols[1].button("Delete goal", key=f"delete_goal_{goal['id']}"):
                 delete_goal(user_id, goal["id"])
                 st.rerun()
 
@@ -1391,13 +1390,10 @@ def show_community(user_id):
             for col, member in zip(cols, members[start:start + 2]):
                 with col:
                     with st.container(border=True):
-                        photo_col, details_col = st.columns([1, 3])
-                        with photo_col:
-                            if member.get("profile_photo"):
-                                st.image(member["profile_photo"], width=92)
-                            else:
-                                st.markdown("<div style='font-size:3rem;text-align:center'>👤</div>", unsafe_allow_html=True)
-                        with details_col:
+                        if member.get("profile_photo"):
+                            st.image(member["profile_photo"], width=92)
+                        else:
+                            st.markdown("<div style='font-size:3rem;text-align:center'>👤</div>", unsafe_allow_html=True)
                             st.markdown(f"**{display_name(member)}**")
                             if member.get("education"):
                                 st.caption(member["education"])
