@@ -1187,7 +1187,7 @@ def show_goals(user_id):
             with head_right:
                 if goal["status"] == "Completed":
                     st.success("Goal complete")
-                elif st.button("Complete goal", key=f"goal_done_{goal['id']}"):
+                elif st.button("Complete goal", key=f"goal_done_{goal['id']}", type="primary"):
                     update_goal_status(user_id, goal["id"], "Completed")
                     st.rerun()
             st.progress(progress["percent"] / 100, text=f"{progress['percent']}% complete · {progress['completed']}/{progress['total']} actions")
