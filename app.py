@@ -113,6 +113,7 @@ def display_name(user_row):
     return (user_row.get("name") or "LIFEWISE member").strip()
 
 st.markdown("""
+"
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
 /* Explicitly pin Streamlit to a LIGHT palette. The previous build styled the
