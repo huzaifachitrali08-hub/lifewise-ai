@@ -583,32 +583,18 @@ div.stFormSubmitButton > button * {
   display: none !important;
   visibility: hidden !important;
 }
-/* REMOVE TOP SPACE */
+/* FIX LOGO OVERFLOW - SAFE */
 .block-container {
-  padding-top: 0rem !important;
-  padding-bottom: 0rem !important;
-  margin-top: 0rem !important;
-}
-/* FIX TOP SPACE + BIG LOGO */
-.block-container {
-  padding-top: 0.5rem !important;
+  padding-top: 1rem !important;
   padding-bottom: 0rem !important;
 }
 div[data-testid="stVerticalBlock"] {
-  gap: 0rem !important;
+  gap: 0.5rem !important;
 }
 div[data-testid="stImage"] img {
-  width: 340px !important;
-  max-width: 90vw !important;
-  margin-bottom: 0px !important;
-}
-div[data-testid="stMarkdownContainer"] p {
-  margin-bottom: 0.2rem !important;
-  margin-top: 0rem !important;
-  padding-top: 0rem !important;
-}
-header[data-testid="stHeader"] {
-  height: 0rem !important;
+  width: 260px !important;
+  max-width: 85vw !important;
+  margin: 0px !important;
 }
 </style>
 """, unsafe_allow_html=True)
