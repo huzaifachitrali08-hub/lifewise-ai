@@ -515,6 +515,28 @@ color:#ffffff !important;
 -webkit-text-fill-color:#ffffff !important;
 opacity:1 !important;
 }
+.stFormSubmitButton > button {
+background:#2f6fed !important;
+border-color:#2f6fed !important;
+}
+.stFormSubmitButton > button p, .stFormSubmitButton > button div, .stFormSubmitButton > button span {
+color:#ffffff !important;
+-webkit-text-fill-color:#ffffff !important;
+}
+label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] div, [data-testid="stWidgetLabel"] span {
+color:#1d2b3f !important;
+-webkit-text-fill-color:#1d2b3f !important;
+opacity:1 !important;
+}
+input, textarea {
+color:#1d2b3f !important;
+-webkit-text-fill-color:#1d2b3f !important;
+}
+button[data-baseweb="tab"], button[data-baseweb="tab"] div, button[data-baseweb="tab"] span {
+color:#1d2b3f !important;
+-webkit-text-fill-color:#1d2b3f !important;
+opacity:1 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
