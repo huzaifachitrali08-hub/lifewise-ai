@@ -756,14 +756,45 @@ def show_goals(user_id):
                     + '<div style="color:#315fce;font-size:.82rem;font-weight:650">' + html.escape(next_action.get("phase", "")) + ' · Due ' + html.escape(next_action.get("due_date") or "Not set") + '</div></div>',
                     unsafe_allow_html=True
                 )
+                # Show a one-time confirmation after the action status is saved.
+                action_flash = st.session_state.pop("goal_action_flash", None)
+                if action_flash:
+                    st.success(action_flash)
+
                 if next_action.get("status") == "Pending":
-                    if st.button("▶ Start this action", key=f"start_next_{next_action['id']}", type="primary"):
-                        update_goal_action_status(user_id, next_action["id"], "In Progress")
-                        st.rerun()
+                    if st.button(
+                        "▶ Start this action",
+                        key=f"start_next_{next_action['id']}",
+                        type="primary",
+                        use_container_width=True,
+                    ):
+                        saved = update_goal_action_status(user_id, next_action["id"], "In Progress")
+                        refreshed = list_goal_actions(user_id, goal["id"])
+                        confirmed = any(
+                            item.get("id") == next_action["id"] and item.get("status") == "In Progress"
+                            for item in refreshed
+                        )
+                        if saved and confirmed:
+                            st.session_state["goal_action_flash"] = "Action started. Your progress has been updated."
+                            st.rerun()
+                        st.error("We couldn't update this action. Please refresh and try again.")
                 elif next_action.get("status") == "In Progress":
-                    if st.button("✓ Mark this action complete", key=f"complete_next_{next_action['id']}", type="primary"):
-                        update_goal_action_status(user_id, next_action["id"], "Completed")
-                        st.rerun()
+                    if st.button(
+                        "✓ Mark this action complete",
+                        key=f"complete_next_{next_action['id']}",
+                        type="primary",
+                        use_container_width=True,
+                    ):
+                        saved = update_goal_action_status(user_id, next_action["id"], "Completed")
+                        refreshed = list_goal_actions(user_id, goal["id"])
+                        confirmed = any(
+                            item.get("id") == next_action["id"] and item.get("status") == "Completed"
+                            for item in refreshed
+                        )
+                        if saved and confirmed:
+                            st.session_state["goal_action_flash"] = "Action completed. Your progress has been updated."
+                            st.rerun()
+                        st.error("We couldn't update this action. Please refresh and try again.")
             if workspace_view == "📊 Visual dashboard":
                 render_goal_analytics(goal, actions, progress)
             elif workspace_view == "🗂️ Action plan":
