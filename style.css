@@ -359,3 +359,122 @@ footer { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+
+/* V19 visibility patch: force light, high-contrast native menus and charts. */
+:root, html, body, .stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"], [data-testid="stMainBlockContainer"] {
+  color-scheme: light !important;
+}
+
+/* BaseWeb select dropdowns can inherit a dark browser/OS menu palette.
+   Explicitly set both the popup surface and every option's text. */
+[data-baseweb="popover"],
+[data-baseweb="popover"] > div,
+[data-baseweb="menu"],
+[role="listbox"],
+[role="listbox"] > div,
+[data-baseweb="select"] [role="listbox"],
+[data-baseweb="popover"] [role="option"] {
+  background: #ffffff !important;
+  color: #172b46 !important;
+  -webkit-text-fill-color: #172b46 !important;
+  color-scheme: light !important;
+  opacity: 1 !important;
+}
+[role="option"],
+[role="option"] *,
+[data-baseweb="menu"] li,
+[data-baseweb="menu"] li *,
+[data-baseweb="popover"] li,
+[data-baseweb="popover"] li * {
+  background-color: #ffffff !important;
+  color: #172b46 !important;
+  -webkit-text-fill-color: #172b46 !important;
+  opacity: 1 !important;
+}
+[role="option"]:hover,
+[role="option"][aria-selected="true"],
+[data-baseweb="menu"] li:hover {
+  background: #e8f0ff !important;
+  color: #173d76 !important;
+  -webkit-text-fill-color: #173d76 !important;
+}
+
+/* Primary action buttons: never allow dark text on the blue surface. */
+[data-testid="stButton"] button[kind="primary"],
+div.stButton > button[kind="primary"],
+[data-testid="stFormSubmitButton"] button[kind="primary"],
+div.stFormSubmitButton > button[kind="primary"] {
+  background: #2858bd !important;
+  border: 1px solid #1d438f !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 750 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+[data-testid="stButton"] button[kind="primary"] *,
+div.stButton > button[kind="primary"] *,
+[data-testid="stFormSubmitButton"] button[kind="primary"] *,
+div.stFormSubmitButton > button[kind="primary"] * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  opacity: 1 !important;
+}
+[data-testid="stButton"] button[kind="primary"]:hover,
+div.stButton > button[kind="primary"]:hover {
+  background: #1d438f !important;
+  border-color: #173873 !important;
+}
+[data-testid="stButton"] button:disabled,
+div.stButton > button:disabled {
+  color: #526782 !important;
+  -webkit-text-fill-color: #526782 !important;
+  background: #e8edf5 !important;
+  opacity: 1 !important;
+}
+
+/* Keep charts on a light card instead of a black plotting canvas. */
+[data-testid="stVegaLiteChart"],
+[data-testid="stArrowVegaLiteChart"],
+[data-testid="stDeckGlJsonChart"],
+[data-testid="stPyplot"],
+[data-testid="stPlotlyChart"] {
+  background: #ffffff !important;
+  color: #172b46 !important;
+  color-scheme: light !important;
+  border: 1px solid #d7e1ee !important;
+  border-radius: 12px !important;
+  padding: .35rem !important;
+}
+[data-testid="stVegaLiteChart"] canvas,
+[data-testid="stVegaLiteChart"] svg,
+.vega-embed, .vega-embed canvas, .vega-embed svg {
+  background: #ffffff !important;
+}
+[data-testid="stVegaLiteChart"] text,
+.vega-embed svg text {
+  fill: #30445f !important;
+  color: #30445f !important;
+}
+
+/* Touch targets and action buttons on narrow screens. */
+@media (max-width: 640px) {
+  [data-testid="stButton"] button[kind="primary"],
+  div.stButton > button[kind="primary"] {
+    min-height: 3.15rem !important;
+    font-size: 1rem !important;
+    padding: .75rem 1rem !important;
+    border-radius: 12px !important;
+    white-space: normal !important;
+  }
+  [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    min-height: 3rem !important;
+  }
+  [data-testid="stVegaLiteChart"] {
+    overflow-x: auto !important;
+    padding: .15rem !important;
+  }
+}

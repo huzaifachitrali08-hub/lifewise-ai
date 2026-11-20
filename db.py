@@ -197,6 +197,59 @@ def init_db():
             WHERE email IS NOT NULL
         """)
 
+        # V20 active execution: check-ins, reported obstacles and evidence records.
+        conn.executescript("""
+        CREATE TABLE IF NOT EXISTS goal_checkins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            goal_id INTEGER NOT NULL,
+            checkin_date TEXT NOT NULL,
+            completed_count INTEGER NOT NULL DEFAULT 0,
+            energy INTEGER NOT NULL DEFAULT 3,
+            reflection TEXT NOT NULL DEFAULT '',
+            blocker TEXT NOT NULL DEFAULT '',
+            next_focus TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(goal_id) REFERENCES user_goals(id) ON DELETE CASCADE,
+            UNIQUE(user_id, goal_id, checkin_date)
+        );
+        CREATE INDEX IF NOT EXISTS idx_goal_checkins_owner_goal
+            ON goal_checkins(user_id, goal_id, checkin_date DESC);
+        CREATE TABLE IF NOT EXISTS goal_problems (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            goal_id INTEGER NOT NULL,
+            problem TEXT NOT NULL,
+            impact TEXT NOT NULL DEFAULT '',
+            solution TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'Open' CHECK(status IN ('Open','In progress','Resolved')),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            resolved_at TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(goal_id) REFERENCES user_goals(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_goal_problems_owner_goal
+            ON goal_problems(user_id, goal_id, id DESC);
+        CREATE TABLE IF NOT EXISTS goal_evidence (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            goal_id INTEGER NOT NULL,
+            action_id INTEGER,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            file_name TEXT,
+            mime_type TEXT,
+            file_data BLOB,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(goal_id) REFERENCES user_goals(id) ON DELETE CASCADE,
+            FOREIGN KEY(action_id) REFERENCES goal_actions(id) ON DELETE SET NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_goal_evidence_owner_goal
+            ON goal_evidence(user_id, goal_id, id DESC);
+        """)
+
 
 def _hash_password(password, salt_hex=None):
     salt = bytes.fromhex(salt_hex) if salt_hex else secrets.token_bytes(16)
@@ -749,3 +802,121 @@ def clear_goal_coach_messages(user_id, goal_id):
             "DELETE FROM goal_coach_messages WHERE user_id=? AND goal_id=?",
             (user_id, goal_id)
         )
+
+
+# V20: active goal execution support. All reads and writes are owner-scoped.
+def save_goal_checkin(user_id, goal_id, checkin_date, completed_count=0, energy=3,
+                      reflection="", blocker="", next_focus=""):
+    with connect() as conn:
+        owned = conn.execute("SELECT id FROM user_goals WHERE id=? AND user_id=?", (goal_id, user_id)).fetchone()
+        if not owned:
+            raise ValueError("Goal not found for this account.")
+        conn.execute("""INSERT INTO goal_checkins
+            (user_id, goal_id, checkin_date, completed_count, energy, reflection, blocker, next_focus)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, goal_id, checkin_date) DO UPDATE SET
+            completed_count=excluded.completed_count, energy=excluded.energy,
+            reflection=excluded.reflection, blocker=excluded.blocker, next_focus=excluded.next_focus""",
+            (user_id, goal_id, str(checkin_date), max(0, int(completed_count)),
+             max(1, min(5, int(energy))), str(reflection)[:4000], str(blocker)[:2000], str(next_focus)[:1000]))
+        return True
+
+
+def list_goal_checkins(user_id, goal_id, limit=30):
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM goal_checkins WHERE user_id=? AND goal_id=? ORDER BY checkin_date DESC LIMIT ?",
+                            (user_id, goal_id, int(limit))).fetchall()
+        return [dict(r) for r in rows]
+
+
+def add_goal_problem(user_id, goal_id, problem, impact="", solution=""):
+    problem = str(problem or "").strip()
+    if not problem:
+        raise ValueError("Describe the problem first.")
+    with connect() as conn:
+        owned = conn.execute("SELECT id FROM user_goals WHERE id=? AND user_id=?", (goal_id, user_id)).fetchone()
+        if not owned:
+            raise ValueError("Goal not found for this account.")
+        cur = conn.execute("INSERT INTO goal_problems(user_id,goal_id,problem,impact,solution) VALUES(?,?,?,?,?)",
+                           (user_id, goal_id, problem[:4000], str(impact)[:2000], str(solution)[:8000]))
+        return cur.lastrowid
+
+
+def list_goal_problems(user_id, goal_id, limit=30):
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM goal_problems WHERE user_id=? AND goal_id=? ORDER BY id DESC LIMIT ?",
+                            (user_id, goal_id, int(limit))).fetchall()
+        return [dict(r) for r in rows]
+
+
+def update_goal_problem_status(user_id, problem_id, status):
+    if status not in ("Open", "In progress", "Resolved"):
+        raise ValueError("Invalid problem status.")
+    with connect() as conn:
+        cur = conn.execute("UPDATE goal_problems SET status=?, resolved_at=CASE WHEN ?='Resolved' THEN CURRENT_TIMESTAMP ELSE NULL END WHERE id=? AND user_id=?",
+                           (status, status, problem_id, user_id))
+        return cur.rowcount > 0
+
+
+def add_goal_evidence(user_id, goal_id, title, description="", action_id=None,
+                      file_name=None, mime_type=None, file_data=None):
+    title = str(title or "").strip()
+    if not title:
+        raise ValueError("Evidence title is required.")
+    with connect() as conn:
+        owned = conn.execute("SELECT id FROM user_goals WHERE id=? AND user_id=?", (goal_id, user_id)).fetchone()
+        if not owned:
+            raise ValueError("Goal not found for this account.")
+        if action_id is not None:
+            action = conn.execute("SELECT id FROM goal_actions WHERE id=? AND goal_id=? AND user_id=?", (action_id, goal_id, user_id)).fetchone()
+            if not action:
+                raise ValueError("Selected action does not belong to this goal.")
+        cur = conn.execute("""INSERT INTO goal_evidence
+            (user_id,goal_id,action_id,title,description,file_name,mime_type,file_data)
+            VALUES(?,?,?,?,?,?,?,?)""",
+            (user_id, goal_id, action_id, title[:200], str(description)[:2000], file_name,
+             mime_type, file_data))
+        return cur.lastrowid
+
+
+def list_goal_evidence(user_id, goal_id, limit=50):
+    with connect() as conn:
+        rows = conn.execute("""SELECT e.id,e.action_id,e.title,e.description,e.file_name,e.mime_type,
+            length(e.file_data) AS file_size,e.created_at,a.title AS action_title
+            FROM goal_evidence e LEFT JOIN goal_actions a ON a.id=e.action_id
+            WHERE e.user_id=? AND e.goal_id=? ORDER BY e.id DESC LIMIT ?""",
+            (user_id, goal_id, int(limit))).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_goal_evidence_file(user_id, evidence_id):
+    with connect() as conn:
+        row = conn.execute("SELECT file_name,mime_type,file_data FROM goal_evidence WHERE id=? AND user_id=?",
+                           (evidence_id, user_id)).fetchone()
+        return dict(row) if row else None
+
+
+def reschedule_pending_goal_actions(user_id, goal_id, start_date, end_date):
+    """Spread unfinished actions in order across a new feasible planning window."""
+    from datetime import date, timedelta
+    start = date.fromisoformat(str(start_date))
+    end = date.fromisoformat(str(end_date))
+    if end < start:
+        raise ValueError("The revised end date must be on or after the start date.")
+    with connect() as conn:
+        owned = conn.execute("SELECT id FROM user_goals WHERE id=? AND user_id=?", (goal_id, user_id)).fetchone()
+        if not owned:
+            raise ValueError("Goal not found for this account.")
+        rows = conn.execute("SELECT id FROM goal_actions WHERE user_id=? AND goal_id=? AND status!='Completed' ORDER BY CASE WHEN due_date IS NULL THEN 1 ELSE 0 END,due_date,id",
+                            (user_id, goal_id)).fetchall()
+        if not rows:
+            return 0
+        span = max(0, (end - start).days)
+        total = len(rows)
+        for index, row in enumerate(rows, start=1):
+            due = start + timedelta(days=round(span * index / total))
+            conn.execute("UPDATE goal_actions SET due_date=? WHERE id=? AND user_id=?",
+                         (due.isoformat(), row["id"], user_id))
+        conn.execute("UPDATE user_goals SET target_date=? WHERE id=? AND user_id=?",
+                     (end.isoformat(), goal_id, user_id))
+        return total

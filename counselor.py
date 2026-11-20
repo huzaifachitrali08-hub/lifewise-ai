@@ -51,9 +51,9 @@ def get_counselor_reply(
         return ("AI setup is incomplete: GEMINI_API_KEY was not found. Add your key to the .env "
                 "file in the LIFEWISE project folder, then restart Streamlit. Your message is saved; "
                 "you can send it again after setup.")
-    model = (os.getenv("GEMINI_MODEL") or "gemini-3.5-flash-lite").strip()
+    model = (os.getenv("GEMINI_MODEL") or "gemini-2.5-flash").strip()
     if not model:
-        model = "gemini-3.5-flash-lite"
+        model = "gemini-2.5-flash"
 
     # Keep instructions static. Profile, memory and goal text is user-controlled
     # and must be passed as untrusted data rather than interpolated into the rules.
@@ -132,19 +132,19 @@ GOAL COACH MODE:
                         error_type, status, model)
         name = error_type.lower()
         if status == 401 or "authentication" in name or "permissiondenied" in name:
-            return ("AI authentication failed (401). Check that GROQ_API_KEY in your project .env "
-                    "is valid, has no quotation marks or extra spaces, and belongs to an active Groq account. "
+            return ("AI authentication failed (401). Check that GEMINI_API_KEY in your project .env "
+                    "is valid, has no quotation marks or extra spaces, and belongs to an active Google AI account. "
                     "Restart Streamlit after changing it.")
         if status == 403:
             return "Google Gemini denied access to this model or account (403). Check API access and your Google AI account settings."
         if status == 404 or "notfound" in name:
-            return (f"The configured AI model '{model}' was not found (404). Check GROQ_MODEL in .env "
+            return (f"The configured AI model '{model}' was not found (404). Check GEMINI_MODEL in .env "
                     "against the model IDs currently available to your Google AI account.")
         if status == 429 or "ratelimit" in name:
             return "The AI service rate limit or quota was reached (429). Wait briefly, check your Google AI usage limits, then try again."
         if "timeout" in name:
             return "The AI request timed out. Check your internet connection and try again."
         if "connection" in name or "network" in name:
-            return "LIFEWISE could not connect to Groq. Check your internet connection, firewall or VPN, then try again."
+            return "LIFEWISE could not connect to Google AI. Check your internet connection, firewall or VPN, then try again."
         return (f"LIFEWISE could not get an AI response ({error_type}). Check your internet connection, "
-                "GROQ_API_KEY and GROQ_MODEL in .env. Your message remains saved; you can retry it.")
+                "GEMINI_API_KEY and GEMINI_MODEL in .env. Your message remains saved; you can retry it.")

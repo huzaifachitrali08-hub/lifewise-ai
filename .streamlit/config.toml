@@ -1,7 +1,13 @@
-x\\z										[theme]
+[theme]
 base = "light"
 primaryColor = "#315fce"
 backgroundColor = "#f8fafc"
 secondaryBackgroundColor = "#ffffff"
 textColor = "#1d2b3f"
-font = "sans serif"								
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+
+[server]
+headless = true
