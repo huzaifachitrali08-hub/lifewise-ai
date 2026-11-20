@@ -40,6 +40,26 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# FIX: Dropdown text was invisible on mobile
+st.markdown("""
+<style>
+div[data-baseweb="popover"] * {
+    color: white !important;
+}
+div[data-baseweb="menu"] li {
+    color: white !important;
+    background-color: #1e293b !important;
+}
+div[data-baseweb="menu"] li:hover {
+    background-color: #2563eb !important;
+    color: white !important;
+}
+div[data-baseweb="calendar"] * {
+    color: white !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 APP_DIR = Path(__file__).parent
 LOGO_PATH = APP_DIR / "lifewise_logo.png"
 MEMORY_CATEGORIES = [
