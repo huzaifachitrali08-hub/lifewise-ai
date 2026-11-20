@@ -34,31 +34,11 @@ load_dotenv()
 init_db()
 
 st.set_page_config(
-    page_title="LIFEWISE AI V15 | Intelligent Goal Planner",
-    page_icon="🧠",
+    page_title="LIFEWISE AI | Personal Growth & Goal Planner",
+    page_icon="🧭",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
-
-# FIX: Dropdown text was invisible on mobile
-st.markdown("""
-<style>
-div[data-baseweb="popover"] * {
-    color: white !important;
-}
-div[data-baseweb="menu"] li {
-    color: white !important;
-    background-color: #1e293b !important;
-}
-div[data-baseweb="menu"] li:hover {
-    background-color: #2563eb !important;
-    color: white !important;
-}
-div[data-baseweb="calendar"] * {
-    color: white !important;
-}
-</style>
-""", unsafe_allow_html=True)
 
 APP_DIR = Path(__file__).parent
 LOGO_PATH = APP_DIR / "lifewise_logo.png"
@@ -132,492 +112,14 @@ def prepare_profile_photo(uploaded_file):
 def display_name(user_row):
     return (user_row.get("name") or "LIFEWISE member").strip()
 
-st.markdown("""
-"
-<style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
-/* Explicitly pin Streamlit to a LIGHT palette. The previous build styled the
-   page backgrounds but left Streamlit's dark-theme text/widget variables intact. */
-:root{
-  color-scheme:light !important;
-  --navy:#93c5fd;--blue:#60a5fa;--ink:#1d2b3f;--muted:#596b82;--line:#dce3ed;
-  --text-color:#1d2b3f;--background-color:#f5f7fb;
-  --secondary-background-color:#ffffff;--primary-color:#60a5fa;
-  --code-background-color:#eef2f8;
-}
-html,body,[class*="css"]{font-family:'DM Sans',sans-serif;color:#1d2b3f}
-body,.stApp,[data-testid="stAppViewContainer"],[data-testid="stMain"]{color:#1d2b3f!important;color-scheme:light!important}
-[data-testid="stMarkdownContainer"],.stMarkdown,p,li,h1,h2,h3,h4,h5,h6{color:#1d2b3f}
-[data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p,
-.stTextInput label,.stTextArea label,.stSelectbox label,.stRadio label,
-.stCheckbox label,.stDateInput label,.stNumberInput label,
-.stFileUploader label,.stMultiSelect label{color:#26364d!important;opacity:1!important}
-input,textarea,[data-baseweb="select"]>div,
-[data-testid="stFileUploader"] section{background:#fff!important;color:#1d2b3f!important;border-color:#cbd5e1!important}
-input::placeholder,textarea::placeholder{color:#64748b!important;opacity:1!important;-webkit-text-fill-color:#64748b!important}
-[data-baseweb="select"] *,[data-baseweb="popover"] *{color:#1d2b3f!important}
-[data-testid="stRadio"] label,[data-testid="stCheckbox"] label{color:#26364d!important;opacity:1!important}
-[data-testid="stFileUploader"] small,[data-testid="stFileUploader"] span{color:#475569!important}
-[data-testid="stAlert"] *{color:#1d2b3f!important}
-div.stButton>button{color:#24364f!important;background:#fff}
-div.stButton>button[kind="primary"]{color:#fff!important}
-[data-testid="stChatInput"] textarea{background:#fff!important;color:#1d2b3f!important;-webkit-text-fill-color:#1d2b3f!important}
-[data-testid="stChatInput"] textarea::placeholder{color:#64748b!important;-webkit-text-fill-color:#64748b!important}
-button,[data-testid="stFormSubmitButton"] button{opacity:1!important}
-.stApp{background:#f5f7fb}[data-testid="stAppViewContainer"]{background:transparent}
-.block-container{padding-top:1.1rem;padding-bottom:3rem;max-width:1440px}
-header[data-testid="stHeader"]{background:rgba(245,247,251,.92)}footer{visibility:hidden}
-.lw-brand-copy{color:var(--muted);font-size:.88rem;margin-top:-.25rem}
-.lw-status{display:inline-flex;align-items:center;gap:.45rem;color:#137a65;font-weight:700;font-size:.78rem;background:#eaf7f3;padding:.42rem .72rem;border-radius:99px;white-space:nowrap}
-.lw-dot{width:7px;height:7px;border-radius:50%;background:#19a783;display:inline-block}
-.lw-hero{padding:1.45rem 1.65rem;border-radius:20px;background:linear-gradient(112deg,#3b82f6,#315fce 78%,#4978df);color:white;box-shadow:0 10px 26px rgba(37,76,154,.12);margin:.35rem 0 1.15rem}
-.lw-hero h2{color:white!important;font-family:Manrope,sans-serif;margin:0 0 .38rem;font-size:1.55rem;letter-spacing:-.025em}
-.lw-hero p{color:#e8efff!important;margin:0;line-height:1.55}
-.lw-auth-panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:1.4rem;box-shadow:0 8px 28px rgba(20,43,74,.045);min-height:100%}
-.lw-auth-hero{background:linear-gradient(145deg,#3b82f6,#60a5fa 76%,#3b82f6);color:#fff;border-radius:22px;padding:2rem 1.65rem;min-height:430px}
-.lw-auth-hero h1{color:white!important;font-family:Manrope,sans-serif;font-size:2.05rem;line-height:1.2;letter-spacing:-.035em}
-.lw-auth-hero p{color:#e8efff!important;line-height:1.65}
-.lw-feature{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.09);border-radius:13px;padding:.78rem .9rem;margin-top:.7rem}
-.lw-card{padding:1.05rem 1.15rem;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 3px 13px rgba(20,43,74,.035);margin-bottom:.8rem}
-.lw-guest{border-color:#cbd9f7;background:#f2f6ff}
-.lw-metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:1rem 1.1rem;min-height:105px;box-shadow:0 3px 13px rgba(20,43,74,.035)}
-.lw-metric-label{color:var(--muted);font-size:.82rem;font-weight:600}
-.lw-metric-value{color:var(--navy);font:800 1.75rem Manrope,sans-serif;margin-top:.25rem}
-.lw-subtle{color:var(--muted);font-size:.9rem}
-.lw-goal-next{background:linear-gradient(115deg,#eef4ff,#f7faff);border:1px solid #cbdaf8;border-left:5px solid #60a5fa;border-radius:16px;padding:1rem 1.1rem;margin:.8rem 0 1rem}
-.lw-goal-next-title{font:700 1.02rem Manrope,sans-serif;color:#173b72!important;margin-bottom:.25rem}
-.lw-phase-label{font-weight:700;color:#243b5a!important}
-.lw-action-card{border:1px solid #dce5f1;border-radius:13px;background:#fff;padding:.75rem .85rem;margin:.45rem 0}
-.lw-goal-intro{color:#52657e!important;font-size:.94rem;line-height:1.6}
-
-.lw-disclaimer{
-  display:flex;flex-direction:column;gap:.3rem;
-  width:100%;box-sizing:border-box;
-  padding:.9rem 1rem;margin:.25rem 0 1rem;
-  color:#243b5a!important;
-  background:#eaf2ff!important;
-  border:1px solid #b9cff5;
-  border-left:4px solid #315fce;
-  border-radius:12px;
-  font-size:.91rem;line-height:1.55;
-}
-.lw-disclaimer *{color:#243b5a!important;opacity:1!important}
-.lw-disclaimer-title{font-weight:700;color:#173b72!important}
-@media(max-width:800px){.lw-disclaimer{padding:.8rem .85rem;font-size:.88rem}}
-
-[data-testid="stChatMessage"]{border:1px solid var(--line);border-radius:16px;padding:.85rem 1rem;background:#fff;box-shadow:0 2px 10px rgba(20,43,74,.03);margin-bottom:.7rem}
-[data-testid="stChatInput"]{border:1px solid #d7e0ef;border-radius:16px;box-shadow:0 4px 16px rgba(37,76,154,.06);background:#fff}
-[data-testid="stChatInput"] textarea{font-size:1rem}
-[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"]{line-height:1.7}
-.lw-chat-meta{color:#8793a5;font-size:.72rem;margin-top:.25rem}
-div.stButton>button,div.stFormSubmitButton>button{border-radius:11px;font-weight:650;min-height:2.55rem;border:1px solid #dbe3ef}
-div.stButton>button[kind="primary"],div.stFormSubmitButton>button[kind="primary"]{background:var(--blue);border:0;color:white}
-[data-testid="stSidebar"]{background:#fff!important;border-right:1px solid var(--line)}
-[data-testid="stTabs"] button,[data-baseweb="tab"]{color:#334155!important;opacity:1!important}
-[data-testid="stExpander"] summary,[data-testid="stExpander"] p{color:#1d2b3f!important}
-[data-testid="stAlert"] p{color:#1d2b3f!important}
-[data-testid="stSidebar"] [data-testid="stImage"] img{border-radius:12px}
-.stRadio [role="radiogroup"]{gap:.35rem}
-.stRadio [role="radiogroup"] label{background:#fff;border:1px solid var(--line);border-radius:11px;padding:.48rem .78rem;margin:0;font-weight:650}
-.stRadio [role="radiogroup"] label:has(input:checked){background:#eaf0ff;border-color:#b9c9f2;color:#244aa8}
-div[data-testid="stExpander"]{border:1px solid var(--line);border-radius:13px}
-hr{border-color:var(--line)}
-/* Consistent control contrast, keyboard focus and touch targets. */
-input,textarea,[data-baseweb="select"]>div{min-height:2.65rem}
-input:focus,textarea:focus,[data-baseweb="select"]>div:focus-within{border-color:#315fce!important;box-shadow:0 0 0 2px rgba(49,95,206,.18)!important}
-button:focus-visible,[role="button"]:focus-visible{outline:3px solid #315fce!important;outline-offset:2px!important}
-div.stButton>button:hover,div.stFormSubmitButton>button:hover{border-color:#315fce!important;color:#173b72!important;background:#edf3ff!important}
-div.stButton>button[kind="primary"]:hover,div.stFormSubmitButton>button[kind="primary"]:hover{background:#244da9!important;color:#fff!important}
-button:disabled{opacity:.58!important;cursor:not-allowed!important}
-[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea,[data-testid="stNumberInput"] input{color:#1d2b3f!important;-webkit-text-fill-color:#1d2b3f!important}
-[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p{color:#26364d!important}
-[data-testid="stChatInput"] textarea{min-height:3rem}
-@media(max-width:800px){.block-container{padding-left:.85rem;padding-right:.85rem;padding-top:.7rem}.lw-auth-hero{min-height:auto;padding:1.45rem}.lw-hero{padding:1.15rem 1.2rem;border-radius:16px}.lw-hero h2{font-size:1.3rem}.lw-auth-hero h1{font-size:1.65rem}.stRadio [role="radiogroup"]{flex-wrap:wrap;gap:.35rem}.stRadio [role="radiogroup"] label{padding:.4rem .58rem;font-size:.82rem;min-height:2.45rem}.lw-card{padding:.9rem}.stButton>button,.stFormSubmitButton>button{min-height:2.8rem}}
-@media(max-width:420px){.block-container{padding-left:.65rem;padding-right:.65rem}.lw-status{font-size:.7rem;padding:.35rem .5rem}.lw-auth-panel{padding:1rem}.stRadio [role="radiogroup"] label{font-size:.76rem;padding:.35rem .45rem}}
-@media(max-width:800px){[data-testid="stTabs"] [role="tablist"]{gap:.2rem;overflow-x:auto;flex-wrap:nowrap}[data-testid="stTabs"] button{white-space:nowrap;font-size:.82rem;padding:.55rem .65rem}.lw-goal-next{padding:.85rem}.lw-action-card{padding:.7rem}.stMetric{padding:.55rem!important}}
-/* V16 GLOBAL VISIBILITY PATCH
-   Streamlit can retain dark-theme component surfaces even when the page is light.
-   Explicitly style alerts, chat messages, profile text and common widget surfaces. */
-:root, [data-testid="stAppViewContainer"]{
-  color-scheme:light!important;
-  --text-color:#1d2b3f!important;
-  --background-color:#f5f7fb!important;
-  --secondary-background-color:#ffffff!important;
-  --primary-color:#315fce!important;
-  --code-background-color:#eef2f8!important;
-}
-.stApp, [data-testid="stMain"], [data-testid="stMainBlockContainer"],
-[data-testid="stVerticalBlock"], [data-testid="stHorizontalBlock"]{
-  color:#1d2b3f;
-}
-[data-testid="stMarkdownContainer"] p,
-[data-testid="stMarkdownContainer"] li,
-[data-testid="stMarkdownContainer"] h1,
-[data-testid="stMarkdownContainer"] h2,
-[data-testid="stMarkdownContainer"] h3,
-[data-testid="stMarkdownContainer"] h4,
-[data-testid="stMarkdownContainer"] strong,
-[data-testid="stMarkdownContainer"] em,
-.stMarkdown p,.stMarkdown li,
-[data-testid="stCaptionContainer"],
-[data-testid="stWidgetLabel"],
-[data-testid="stWidgetLabel"] p,
-[data-testid="stText"]{
-  color:#1d2b3f!important;
-  opacity:1!important;
-  -webkit-text-fill-color:#1d2b3f!important;
-}
-/* Streamlit st.info / st.warning / st.success / st.error: never leave dark panels
-   with dark or invisible text when the app is using its light visual theme. */
-[data-testid="stAlert"],
-[data-testid="stAlert"] [data-testid="stMarkdownContainer"],
-[data-testid="stAlert"] [data-testid="stAlertContent"],
-[data-testid="stAlert"] [data-testid="stAlertContent"] *{
-  background-color:#eaf2ff!important;
-  color:#243b5a!important;
-  -webkit-text-fill-color:#243b5a!important;
-  opacity:1!important;
-}
-[data-testid="stAlert"]{
-  border:1px solid #c7d8f5!important;
-  border-left:4px solid #315fce!important;
-  border-radius:12px!important;
-}
-/* Preserve intentionally white text on branded gradient hero panels. */
-.lw-hero h2,.lw-hero p,.lw-auth-hero h1,.lw-auth-hero p{
-  color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;opacity:1!important;
-}
-/* Keep profile names, headings and member details readable. */
-[data-testid="stMain"] h1,[data-testid="stMain"] h2,
-[data-testid="stMain"] h3,[data-testid="stMain"] h4,
-[data-testid="stMain"] p,[data-testid="stMain"] strong{
-  color:#1d2b3f!important;
-  -webkit-text-fill-color:#1d2b3f!important;
-  opacity:1!important;
-}
-/* Chat history surfaces and message text. */
-[data-testid="stChatMessage"],
-[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"]{
-  background:#ffffff!important;
-  color:#1d2b3f!important;
-  -webkit-text-fill-color:#1d2b3f!important;
-  opacity:1!important;
-}
-[data-testid="stChatMessage"]{
-  border:1px solid #dce3ed!important;
-  border-radius:14px!important;
-}
-/* Inputs, uploaders, select menus and number/date controls. */
-[data-testid="stTextInput"] input,
-[data-testid="stTextArea"] textarea,
-[data-testid="stNumberInput"] input,
-[data-testid="stDateInput"] input,
-[data-testid="stChatInput"] textarea,
-[data-baseweb="input"] input,
-[data-baseweb="textarea"] textarea{
-  background:#ffffff!important;
-  color:#1d2b3f!important;
-  -webkit-text-fill-color:#1d2b3f!important;
-  caret-color:#1d2b3f!important;
-  opacity:1!important;
-}
-[data-testid="stTextInput"] input::placeholder,
-[data-testid="stTextArea"] textarea::placeholder,
-[data-testid="stChatInput"] textarea::placeholder{
-  color:#64748b!important;
-  -webkit-text-fill-color:#64748b!important;
-  opacity:1!important;
-}
-[data-testid="stFileUploader"] section,
-[data-testid="stFileUploader"] section *{
-  color:#334155!important;
-  opacity:1!important;
-}
-[data-testid="stSidebar"],
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] *{
-  color:#1d2b3f!important;
-}
-/* Mobile: prevent oversized panels and horizontal overflow; retain touch targets. */
-*,*::before,*::after{box-sizing:border-box}
-[data-testid="stMainBlockContainer"]{min-width:0;max-width:100%}
-[data-testid="stMain"] img{max-width:100%;height:auto}
-@media(max-width:800px){
-  .block-container{width:100%;max-width:100%;padding-left:.8rem;padding-right:.8rem}
-  [data-testid="stAlert"]{padding:.75rem .85rem!important}
-  [data-testid="stChatMessage"]{padding:.7rem .8rem!important}
-  [data-testid="stTabs"] [role="tablist"]{max-width:100%;overflow-x:auto}
-  [data-testid="stMain"]{overflow-x:hidden}
-  div.stButton>button,div.stFormSubmitButton>button{width:100%;min-height:2.8rem;white-space:normal}
-}
-@media(max-width:420px){
-  .block-container{padding-left:.65rem;padding-right:.65rem}
-  [data-testid="stAlert"]{font-size:.9rem}
-  [data-testid="stChatMessage"]{padding:.6rem .7rem!important}
-}
-
-/* V17: enforce readable contrast across Streamlit's generated DOM, including
-   BaseWeb wrappers used by chat, alerts, forms, profile and community pages. */
-:root {
-  color-scheme: light !important;
-  --primary-color: #315fce !important;
-  --background-color: #f5f7fb !important;
-  --secondary-background-color: #ffffff !important;
-  --text-color: #1d2b3f !important;
-  --border-color: #cbd5e1 !important;
-}
-html, body, .stApp, [data-testid="stAppViewContainer"],
-[data-testid="stMain"], [data-testid="stMainBlockContainer"] {
-  background-color: #f5f7fb !important;
-  color: #1d2b3f !important;
-  color-scheme: light !important;
-}
-/* Ordinary text, headings, captions, labels and profile details. */
-[data-testid="stMain"] :is(p, li, h1, h2, h3, h4, h5, h6, strong, em, label),
-[data-testid="stMain"] [data-testid="stMarkdownContainer"],
-[data-testid="stMain"] [data-testid="stText"],
-[data-testid="stMain"] [data-testid="stCaptionContainer"],
-[data-testid="stSidebar"] :is(p, li, h1, h2, h3, h4, h5, h6, label),
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
-  color: #1d2b3f !important;
-  -webkit-text-fill-color: #1d2b3f !important;
-  opacity: 1 !important;
-}
-/* Restore intentional white copy inside branded dark hero areas. */
-.lw-hero, .lw-hero *, .lw-auth-hero, .lw-auth-hero *,
-.lw-status, .lw-status * {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-.lw-status { background: #137a65 !important; }
-/* Alerts: Streamlit versions use several nested wrappers. Set both the outer
-   surface and every text-bearing descendant to a light, readable treatment. */
-[data-testid="stAlert"], div[data-testid="stAlert"], .stAlert,
-[data-testid="stAlert"] > div, [data-testid="stAlert"] [data-testid],
-[data-testid="stAlert"] [data-testid] > div {
-  background: #eaf2ff !important;
-  border-color: #c7d8f5 !important;
-}
-[data-testid="stAlert"] *, .stAlert * {
-  color: #243b5a !important;
-  -webkit-text-fill-color: #243b5a !important;
-  opacity: 1 !important;
-}
-/* Chat messages and chat composer: style all nested wrappers, not only the
-   outer element, to prevent dark theme backgrounds bleeding through. */
-[data-testid="stChatMessage"], [data-testid="stChatMessage"] > div,
-[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"],
-[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] * {
-  background-color: #ffffff !important;
-  color: #1d2b3f !important;
-  -webkit-text-fill-color: #1d2b3f !important;
-  opacity: 1 !important;
-}
-[data-testid="stChatMessage"] {
-  border: 1px solid #dce3ed !important;
-  border-radius: 14px !important;
-}
-[data-testid="stChatInput"], [data-testid="stChatInput"] > div,
-[data-testid="stChatInput"] textarea {
-  background: #ffffff !important;
-  color: #1d2b3f !important;
-  -webkit-text-fill-color: #1d2b3f !important;
-  border-color: #cbd5e1 !important;
-  caret-color: #1d2b3f !important;
-}
-/* Text, number, date, password, select, multiselect and text-area widgets. */
-[data-baseweb="input"], [data-baseweb="textarea"],
-[data-baseweb="select"] > div, [data-testid="stTextInput"] input,
-[data-testid="stTextArea"] textarea, [data-testid="stNumberInput"] input,
-[data-testid="stDateInput"] input, [data-testid="stTimeInput"] input,
-[data-testid="stChatInput"] textarea {
-  background: #ffffff !important;
-  color: #1d2b3f !important;
-  -webkit-text-fill-color: #1d2b3f !important;
-  border-color: #cbd5e1 !important;
-  caret-color: #1d2b3f !important;
-  opacity: 1 !important;
-}
-[data-baseweb="input"] *, [data-baseweb="textarea"] *,
-[data-baseweb="select"] *, [data-baseweb="popover"] *,
-[data-baseweb="menu"] *, [role="listbox"] * {
-  color: #1d2b3f !important;
-  -webkit-text-fill-color: #1d2b3f !important;
-  opacity: 1 !important;
-}
-input::placeholder, textarea::placeholder,
-[data-testid="stChatInput"] textarea::placeholder {
-  color: #64748b !important;
-  -webkit-text-fill-color: #64748b !important;
-  opacity: 1 !important;
-}
-/* Radio, checkbox, toggle, uploader, tabs and expanders. */
-[data-testid="stRadio"] *, [data-testid="stCheckbox"] *,
-[data-testid="stToggle"] *, [data-testid="stFileUploader"] *,
-[data-testid="stTabs"] *, [data-testid="stExpander"] * {
-  opacity: 1 !important;
-}
-[data-testid="stRadio"] label, [data-testid="stCheckbox"] label,
-[data-testid="stToggle"] label, [data-testid="stFileUploader"] label,
-[data-testid="stTabs"] button, [data-testid="stExpander"] summary,
-[data-testid="stExpander"] summary * {
-  color: #26364d !important;
-  -webkit-text-fill-color: #26364d !important;
-}
-[data-testid="stFileUploader"] section {
-  background: #ffffff !important;
-  border: 1px dashed #94a3b8 !important;
-  border-radius: 12px !important;
-}
-/* Containers/cards should not inherit a dark surface from a browser theme. */
-[data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stVerticalBlockBorderWrapper"] > div,
-[data-testid="stForm"], [data-testid="stForm"] > div,
-[data-testid="stExpander"] > details,
-[data-testid="stExpander"] details > div {
-  background-color: #ffffff !important;
-  color: #1d2b3f !important;
-  border-color: #dce3ed !important;
-}
-.lw-card, .lw-metric, .lw-action-card, .lw-auth-panel {
-  background: #ffffff !important;
-  color: #1d2b3f !important;
-}
-/* Buttons need a solid label contrast and large enough touch area. */
-div.stButton > button, div.stFormSubmitButton > button,
-[data-testid="stDownloadButton"] button {
-  background: #ffffff !important;
-  color: #24364f !important;
-  -webkit-text-fill-color: #24364f !important;
-  border: 1px solid #cbd5e1 !important;
-  opacity: 1 !important;
-  min-height: 2.7rem;
-}
-div.stButton > button[kind="primary"],
-div.stFormSubmitButton > button[kind="primary"] {
-  background: #315fce !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-/* Prevent dark blank iframe/canvas placeholders from becoming oversized.
-   Charts keep their own transparent/light backgrounds when they render. */
-[data-testid="stMain"] iframe {
-  max-width: 100% !important;
-}
-[data-testid="stMain"] img, [data-testid="stMain"] svg {
-  max-width: 100%;
-}
-@media (max-width: 800px) {
-  .block-container { width: 100% !important; max-width: 100% !important;
-    padding-left: .75rem !important; padding-right: .75rem !important; }
-  [data-testid="stMain"] { min-width: 0 !important; overflow-x: hidden !important; }
-  [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; gap: .65rem !important; }
-  [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-    min-width: min(100%, 260px) !important; flex: 1 1 100% !important;
-  }
-  [data-testid="stTabs"] [role="tablist"] { max-width: 100%; overflow-x: auto; }
-  [data-testid="stTabs"] button { white-space: nowrap; }
-  div.stButton > button, div.stFormSubmitButton > button { width: 100%; white-space: normal; }
-}
-@media (max-width: 420px) {
-  .block-container { padding-left: .6rem !important; padding-right: .6rem !important; }
-  [data-testid="stChatMessage"] { padding: .65rem .7rem !important; }
-  [data-testid="stAlert"] { padding: .7rem .75rem !important; }
-}
-.lw-hero p, .lw-hero div, .lw-hero span,
-.lw-auth-hero p, .lw-auth-hero div, .lw-auth-hero span,
-.lw-feature p, .lw-feature div, .lw-feature span {
-color:#ffffff !important;
--webkit-text-fill-color:#ffffff !important;
-opacity:1 !important;
-}
-.stButton > button, .stButton > button p, .stButton > button div, .stButton > button span,
-.stFormSubmitButton > button, .stFormSubmitButton > button p, .stFormSubmitButton > button div, .stFormSubmitButton > button span {
-color:#ffffff !important;
--webkit-text-fill-color:#ffffff !important;
-opacity:1 !important;
-}
-.stFormSubmitButton > button {
-background:#2f6fed !important;
-border-color:#2f6fed !important;
-}
-.stFormSubmitButton > button p, .stFormSubmitButton > button div, .stFormSubmitButton > button span {
-color:#ffffff !important;
--webkit-text-fill-color:#ffffff !important;
-}
-label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] div, [data-testid="stWidgetLabel"] span {
-color:#1d2b3f !important;
--webkit-text-fill-color:#1d2b3f !important;
-opacity:1 !important;
-}
-input, textarea {
-color:#1d2b3f !important;
--webkit-text-fill-color:#1d2b3f !important;
-}
-button[data-baseweb="tab"], button[data-baseweb="tab"] div, button[data-baseweb="tab"] span {
-color:#1d2b3f !important;
--webkit-text-fill-color:#1d2b3f !important;
-opacity:1 !important;
-}
-/* FIX LOG IN BUTTON ONLY */
-[data-testid="stFormSubmitButton"] button,
-div.stFormSubmitButton > button,
-div.stFormSubmitButton > button[kind="primaryFormSubmit"],
-div.stFormSubmitButton > button[kind="primary"] {
-  background: #315fce !important;
-  background-color: #315fce !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border: 1px solid #315fce !important;
-  opacity: 1 !important;
-}
-[data-testid="stFormSubmitButton"] button *,
-div.stFormSubmitButton > button * {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  opacity: 1 !important;
-}
-/* FIX LOG IN BUTTON ONLY */
-[data-testid="stFormSubmitButton"] button,
-div.stFormSubmitButton > button,
-div.stFormSubmitButton > button[kind="primaryFormSubmit"],
-div.stFormSubmitButton > button[kind="primary"] {
-  background: #315fce !important;
-  background-color: #315fce !important;
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  border: 1px solid #315fce !important;
-  opacity: 1 !important;
-}
-[data-testid="stFormSubmitButton"] button *,
-div.stFormSubmitButton > button * {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  opacity: 1 !important;
-}
-/* HIDE FORK / GITHUB / 3 DOTS */
-[data-testid="stToolbar"],
-[data-testid="stDecoration"],
-[data-testid="stAppDeployButton"],
-[data-testid="stStatusWidget"],
-[data-testid="stMainMenu"] {
-  display: none !important;
-  visibility: hidden !important;
-}
-/* FIX LOGO OVERFLOW - SAFE */
-.block-container {
-  padding-top: 1rem !important;
-  padding-bottom: 0rem !important;
-}
-div[data-testid="stVerticalBlock"] {
-  gap: 0.5rem !important;
-}
-div[data-testid="stImage"] img {
-  width: 260px !important;
-  max-width: 85vw !important;
-  margin: 0px !important;
-}
-</style>
-""", unsafe_allow_html=True)
+# Standalone stylesheet: one source of truth for desktop and mobile styling.
+STYLE_PATH = APP_DIR / "style.css"
+if not STYLE_PATH.is_file():
+    raise FileNotFoundError("style.css is required and must be placed beside app.py.")
+st.markdown(
+    "<style>\n" + STYLE_PATH.read_text(encoding="utf-8") + "\n</style>",
+    unsafe_allow_html=True,
+)
 
 
 def show_brand():
@@ -963,7 +465,7 @@ def render_chat(messages, guest=False, user_id=None):
     st.caption("Your message box stays at the bottom. New replies appear at the latest point in the conversation.")
     top_left, top_right = st.columns([5, 1])
     with top_right:
-        if st.button("＋ New chat", use_container_width=True, type="primary"):
+        if st.button("＋ New chat", use_container_width=True):
             if guest:
                 st.session_state["guest_messages"] = []
             else:
@@ -1030,7 +532,7 @@ def render_chat(messages, guest=False, user_id=None):
         st.divider()
         logout_col, _ = st.columns([1, 4])
         with logout_col:
-            if st.button("Log out", key="counselor_bottom_logout", use_container_width=True, type="primary"):
+            if st.button("Log out", key="counselor_bottom_logout", use_container_width=True):
                 for session_key in ("user", "selected_dm_user", "direct_message_conversation"):
                     st.session_state.pop(session_key, None)
                 st.rerun()
@@ -1229,7 +731,7 @@ def show_goals(user_id):
             with head_right:
                 if goal["status"] == "Completed":
                     st.success("Goal complete")
-                elif st.button("Complete goal", key=f"goal_done_{goal['id']}", type="primary"):
+                elif st.button("Complete goal", key=f"goal_done_{goal['id']}"):
                     update_goal_status(user_id, goal["id"], "Completed")
                     st.rerun()
             st.progress(progress["percent"] / 100, text=f"{progress['percent']}% complete · {progress['completed']}/{progress['total']} actions")
@@ -1312,9 +814,10 @@ def show_goals(user_id):
                 show_goal_coach(user_id, goal, actions, progress)
 
             footer_cols = st.columns([1, 1, 3])
-            if goal["status"] != "Completed" and footer_cols[0].button("Mark goal active",type="primary", key=f"goal_active_{goal['id']}"):
+            if goal["status"] != "Completed" and footer_cols[0].button("Mark goal active", key=f"goal_active_{goal['id']}"):
                 update_goal_status(user_id, goal["id"], "Active")
                 st.rerun()
+            if footer_cols[1].button("Delete goal", key=f"delete_goal_{goal['id']}"):
                 delete_goal(user_id, goal["id"])
                 st.rerun()
 
@@ -1410,10 +913,13 @@ def show_community(user_id):
             for col, member in zip(cols, members[start:start + 2]):
                 with col:
                     with st.container(border=True):
-                        if member.get("profile_photo"):
-                            st.image(member["profile_photo"], width=92)
-                        else:
-                            st.markdown("<div style='font-size:3rem;text-align:center'>👤</div>", unsafe_allow_html=True)
+                        photo_col, details_col = st.columns([1, 3])
+                        with photo_col:
+                            if member.get("profile_photo"):
+                                st.image(member["profile_photo"], width=92)
+                            else:
+                                st.markdown("<div style='font-size:3rem;text-align:center'>👤</div>", unsafe_allow_html=True)
+                        with details_col:
                             st.markdown(f"**{display_name(member)}**")
                             if member.get("education"):
                                 st.caption(member["education"])
