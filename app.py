@@ -21,6 +21,9 @@ from db import (
     add_goal_actions, list_goal_actions, update_goal_action_status,
     add_custom_goal_action, delete_goal_action,
     save_goal_coach_message, list_goal_coach_messages, clear_goal_coach_messages,
+    save_goal_checkin, list_goal_checkins, add_goal_problem, list_goal_problems,
+    update_goal_problem_status, add_goal_evidence, list_goal_evidence,
+    get_goal_evidence_file, reschedule_pending_goal_actions,
     add_memory, list_memories, get_approved_memories,
     update_memory, delete_memory,
     save_message, recent_messages, clear_chat
@@ -741,11 +744,11 @@ def show_goals(user_id):
             if goal.get("success_measure"):
                 st.caption("Success measure: " + goal["success_measure"])
 
-            view_key = f"goal_workspace_view_{goal['id']}"
-            workspace_view = st.radio(
+            view_key = f"goal_workspace_view_v20_{goal['id']}"
+            workspace_view = st.selectbox(
                 "Choose your workspace",
-                ["📊 Visual dashboard", "🗂️ Action plan", "💬 Goal Coach"],
-                horizontal=True, key=view_key, label_visibility="collapsed"
+                ["📊 Dashboard", "🗂️ Action plan", "💬 Goal Coach", "🧩 Problem Solver", "📅 Check-ins", "🏆 Evidence"],
+                key=view_key, label_visibility="collapsed"
             )
             next_action = next((a for a in actions if a.get("status") != "Completed"), None)
             if next_action and goal.get("status") != "Completed":
@@ -795,8 +798,27 @@ def show_goals(user_id):
                             st.session_state["goal_action_flash"] = "Action completed. Your progress has been updated."
                             st.rerun()
                         st.error("We couldn't update this action. Please refresh and try again.")
-            if workspace_view == "📊 Visual dashboard":
+            if workspace_view == "📊 Dashboard":
                 render_goal_analytics(goal, actions, progress)
+                st.markdown("#### ⚡ Today's action focus")
+                today_actions = [a for a in actions if a.get("status") != "Completed"][:3]
+                if today_actions:
+                    st.caption("Start with these manageable actions. The list is based on your saved plan and due-date order.")
+                    for daily_action in today_actions:
+                        due_text = daily_action.get("due_date") or "No due date"
+                        st.markdown(f"**{daily_action['title']}** · {daily_action['status']} · Due {due_text}")
+                        d1, d2 = st.columns(2)
+                        if daily_action["status"] == "Pending" and d1.button("▶ Start", key=f"daily_start_{daily_action['id']}", use_container_width=True):
+                            update_goal_action_status(user_id, daily_action["id"], "In Progress")
+                            st.rerun()
+                        if daily_action["status"] == "In Progress" and d1.button("✓ Complete", key=f"daily_done_{daily_action['id']}", use_container_width=True):
+                            update_goal_action_status(user_id, daily_action["id"], "Completed")
+                            st.rerun()
+                else:
+                    st.success("All actions in this plan are complete. Add a new milestone if you want to continue.")
+                overdue = [a for a in actions if a.get("status") != "Completed" and a.get("due_date") and a["due_date"] < datetime.now().date().isoformat()]
+                if overdue:
+                    st.warning(f"{len(overdue)} unfinished action(s) are overdue. Review the Action plan and use the adaptive schedule tool if your timeline has changed.")
             elif workspace_view == "🗂️ Action plan":
                 if actions:
                     phases = list(dict.fromkeys(x["phase"] for x in actions))
@@ -828,6 +850,18 @@ def show_goals(user_id):
                         generated = build_action_plan(goal["title"], goal["area"], deadline, goal.get("weekly_hours", 5), goal.get("starting_point", "Beginner"), goal.get("success_measure", ""))
                         add_goal_actions(user_id, goal["id"], generated)
                         st.rerun()
+                if actions:
+                    with st.expander("🔄 Adapt my roadmap schedule"):
+                        st.caption("Reschedule unfinished actions in their existing order. Completed actions and their history are not changed.")
+                        revised_end_default = datetime.fromisoformat(goal["target_date"]).date() if goal.get("target_date") else datetime.now().date() + __import__("datetime").timedelta(days=90)
+                        revised_end = st.date_input("New realistic planning end date", value=max(revised_end_default, datetime.now().date()), min_value=datetime.now().date(), key=f"adaptive_end_{goal['id']}")
+                        if st.button("Rebuild unfinished schedule", key=f"adaptive_apply_{goal['id']}", type="primary"):
+                            try:
+                                changed = reschedule_pending_goal_actions(user_id, goal["id"], datetime.now().date().isoformat(), revised_end.isoformat())
+                                st.success(f"Updated due dates for {changed} unfinished action(s). Completed work was preserved.")
+                                st.rerun()
+                            except ValueError as error:
+                                st.error(str(error))
                 with st.expander("＋ Add my own action"):
                     with st.form(f"custom_action_{goal['id']}", clear_on_submit=True):
                         custom_phase = st.text_input("Stage / milestone", value="My actions", key=f"custom_phase_{goal['id']}")
@@ -841,6 +875,141 @@ def show_goals(user_id):
                             st.rerun()
                         except ValueError as error:
                             st.error(str(error))
+            elif workspace_view == "🧩 Problem Solver":
+                st.markdown("#### 🧩 Turn a blocker into a practical recovery plan")
+                st.caption("Describe what is stopping you. LIFEWISE analyses the selected goal and saved actions, then helps you choose a corrective task.")
+                with st.form(f"problem_form_{goal['id']}"):
+                    problem_text = st.text_area("What problem are you facing?", placeholder="Example: I keep missing my study targets because I do not understand statistics.", height=110)
+                    problem_impact = st.text_input("How is it affecting your goal?", placeholder="Example: I am two weeks behind my study plan.")
+                    problem_submit = st.form_submit_button("Analyse problem and suggest solutions", type="primary", use_container_width=True)
+                if problem_submit:
+                    if not problem_text.strip():
+                        st.error("Please describe the problem so LIFEWISE can help.")
+                    else:
+                        with st.spinner("LIFEWISE is analysing your obstacle and current plan…"):
+                            problem_context = {
+                                "title": goal.get("title"), "target_date": goal.get("target_date"),
+                                "weekly_hours": goal.get("weekly_hours"), "starting_point": goal.get("starting_point"),
+                                "progress": progress,
+                                "actions": [{"title": a["title"], "status": a["status"], "due_date": a.get("due_date"), "phase": a.get("phase")} for a in actions]
+                            }
+                            problem_prompt = ("Act as LIFEWISE's practical problem-solving coach. Analyse this obstacle against the goal and action data. Give: (1) likely root causes, clearly marked as hypotheses, (2) 2-4 realistic solutions, (3) one recommended next action that can be done within 1-3 days, (4) how to measure whether it worked. Do not claim to change saved tasks. Problem: " + problem_text + "\nImpact: " + problem_impact)
+                            solution = get_counselor_reply(problem_prompt, profile=get_profile(user_id), goals=[problem_context], goal_coach=True)
+                            add_goal_problem(user_id, goal["id"], problem_text, problem_impact, solution)
+                            st.session_state[f"latest_problem_solution_{goal['id']}"] = solution
+                latest_solution = st.session_state.get(f"latest_problem_solution_{goal['id']}")
+                if latest_solution:
+                    st.markdown("##### Suggested recovery plan")
+                    st.markdown(latest_solution)
+                    with st.expander("＋ Convert the recommended step into a saved action", expanded=True):
+                        with st.form(f"problem_action_{goal['id']}"):
+                            recovery_title = st.text_input("Action title", placeholder="Example: Complete 10 introductory statistics exercises")
+                            recovery_description = st.text_area("What exactly will you do?", placeholder="Write a small, measurable task.")
+                            recovery_due = st.date_input("Due date", value=datetime.now().date() + __import__("datetime").timedelta(days=2), min_value=datetime.now().date())
+                            recovery_submit = st.form_submit_button("Add recovery action to my plan", type="primary")
+                        if recovery_submit:
+                            try:
+                                add_custom_goal_action(user_id, goal["id"], recovery_title, recovery_description, recovery_due.isoformat(), "Recovery actions")
+                                st.success("Recovery action added to your saved plan.")
+                                st.rerun()
+                            except ValueError as error:
+                                st.error(str(error))
+                problems = list_goal_problems(user_id, goal["id"])
+                if problems:
+                    st.markdown("##### Previous problems")
+                    for item in problems[:8]:
+                        with st.container(border=True):
+                            st.markdown(f"**{item['problem']}**")
+                            st.caption(f"{item['created_at']} · {item['status']}")
+                            if item.get("solution"):
+                                with st.expander("View suggested solution"):
+                                    st.markdown(item["solution"])
+                            status = st.selectbox("Problem status", ["Open", "In progress", "Resolved"], index=["Open", "In progress", "Resolved"].index(item["status"]), key=f"problem_status_{item['id']}")
+                            if status != item["status"]:
+                                update_goal_problem_status(user_id, item["id"], status)
+                                st.rerun()
+            elif workspace_view == "📅 Check-ins":
+                st.markdown("#### 📅 Daily and weekly progress check-in")
+                st.caption("Record what happened, identify blockers and choose the next focus. Your check-ins are saved privately to your account.")
+                with st.form(f"checkin_form_{goal['id']}"):
+                    checkin_day = st.date_input("Check-in date", value=datetime.now().date(), key=f"checkin_day_{goal['id']}")
+                    completed_today = st.number_input("How many actions did you complete today?", min_value=0, max_value=100, value=0, step=1)
+                    energy = st.slider("How was your energy / focus?", 1, 5, 3, key=f"checkin_energy_{goal['id']}")
+                    reflection = st.text_area("What went well today?", key=f"checkin_reflection_{goal['id']}")
+                    blocker = st.text_area("What blocked your progress?", key=f"checkin_blocker_{goal['id']}")
+                    next_focus = st.text_input("What is your next focus?", key=f"checkin_focus_{goal['id']}")
+                    checkin_submit = st.form_submit_button("Save my check-in", type="primary", use_container_width=True)
+                if checkin_submit:
+                    save_goal_checkin(user_id, goal["id"], checkin_day.isoformat(), completed_today, energy, reflection, blocker, next_focus)
+                    st.success("Your check-in has been saved.")
+                    st.rerun()
+                checkins = list_goal_checkins(user_id, goal["id"])
+                if checkins:
+                    from datetime import timedelta
+                    week_start = (datetime.now().date() - timedelta(days=6)).isoformat()
+                    week_entries = [entry for entry in checkins if entry.get("checkin_date", "") >= week_start]
+                    week_completed = sum(int(entry.get("completed_count") or 0) for entry in week_entries)
+                    week_energy = round(sum(int(entry.get("energy") or 0) for entry in week_entries) / len(week_entries), 1) if week_entries else 0
+                    week_blockers = sum(1 for entry in week_entries if (entry.get("blocker") or "").strip())
+                    st.markdown("##### Your last 7 days")
+                    summary_cols = st.columns(3)
+                    summary_cols[0].metric("Check-ins", len(week_entries))
+                    summary_cols[1].metric("Actions reported", week_completed)
+                    summary_cols[2].metric("Average focus", f"{week_energy}/5" if week_entries else "—")
+                    if week_blockers:
+                        st.info(f"You recorded {week_blockers} blocker(s) this week. Use Problem Solver to turn a blocker into a recovery action.")
+                    st.markdown("##### Recent check-ins")
+                    st.metric("Check-ins recorded", len(checkins))
+                    for entry in checkins[:7]:
+                        with st.container(border=True):
+                            st.markdown(f"**{entry['checkin_date']}** · {entry['completed_count']} completed · Focus {entry['energy']}/5")
+                            if entry.get("reflection"):
+                                st.write("Went well: " + entry["reflection"])
+                            if entry.get("blocker"):
+                                st.warning("Blocker: " + entry["blocker"])
+                            if entry.get("next_focus"):
+                                st.caption("Next focus: " + entry["next_focus"])
+                else:
+                    st.info("Your first check-in will create the start of your personal progress history.")
+            elif workspace_view == "🏆 Evidence":
+                st.markdown("#### 🏆 Evidence and achievements")
+                st.caption("Save proof of completed work, such as a project, certificate, assignment or portfolio item. Avoid uploading highly sensitive documents.")
+                with st.form(f"evidence_form_{goal['id']}"):
+                    evidence_title = st.text_input("Achievement / evidence title", placeholder="Example: Completed Python data analysis project")
+                    evidence_description = st.text_area("What does this demonstrate?")
+                    action_choices = {f"No linked action": None}
+                    action_choices.update({f"{a['title']} ({a['status']}) · #{a['id']}": a["id"] for a in actions})
+                    selected_evidence_action = st.selectbox("Link to an action (optional)", list(action_choices.keys()))
+                    evidence_file = st.file_uploader("Attach evidence (optional, max 5 MB)", type=["pdf", "png", "jpg", "jpeg", "txt", "docx", "csv", "zip"], key=f"evidence_upload_{goal['id']}")
+                    evidence_submit = st.form_submit_button("Save achievement", type="primary", use_container_width=True)
+                if evidence_submit:
+                    try:
+                        file_data = evidence_file.getvalue() if evidence_file else None
+                        if file_data and len(file_data) > 5 * 1024 * 1024:
+                            raise ValueError("Evidence files must be 5 MB or smaller.")
+                        add_goal_evidence(user_id, goal["id"], evidence_title, evidence_description,
+                                          action_choices[selected_evidence_action],
+                                          evidence_file.name if evidence_file else None,
+                                          evidence_file.type if evidence_file else None, file_data)
+                        st.success("Achievement saved to your evidence tracker.")
+                        st.rerun()
+                    except ValueError as error:
+                        st.error(str(error))
+                evidence_items = list_goal_evidence(user_id, goal["id"])
+                if evidence_items:
+                    st.markdown("##### Saved achievements")
+                    for item in evidence_items:
+                        with st.container(border=True):
+                            st.markdown(f"**🏅 {item['title']}**")
+                            if item.get("description"):
+                                st.write(item["description"])
+                            st.caption(f"{item['created_at']} · {item.get('action_title') or 'Not linked to an action'}")
+                            if item.get("file_name"):
+                                file_record = get_goal_evidence_file(user_id, item["id"])
+                                if file_record and file_record.get("file_data"):
+                                    st.download_button("Download " + item["file_name"], file_record["file_data"], file_name=item["file_name"], mime=file_record.get("mime_type") or "application/octet-stream", key=f"evidence_download_{item['id']}")
+                else:
+                    st.info("No evidence saved yet. Add your first achievement above.")
             elif workspace_view == "💬 Goal Coach":
                 show_goal_coach(user_id, goal, actions, progress)
 
