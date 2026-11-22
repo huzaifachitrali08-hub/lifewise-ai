@@ -8,6 +8,6 @@ font = "sans serif"
 
 [client]
 toolbarMode = "minimal"
-
+toolborMode = "hidden"
 [server]
 headless = true
