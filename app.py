@@ -23,7 +23,7 @@ header {display: none !important;}
 [data-testid="stDecoration"] {display: none !important;}
 [data-testid="stStatusWidget"] {display: none !important;}
 .block-container {padding-top: 0rem !important; padding-bottom: 0rem !important;}
-.stApp {margin-top: -50px !important;}
+.stApp {margin-top: -20px !important;}
 </style>
 """, unsafe_allow_html=True)
 from dotenv import load_dotenv
