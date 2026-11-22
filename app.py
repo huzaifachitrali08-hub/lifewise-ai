@@ -8,6 +8,14 @@ from pathlib import Path
 from PIL import Image
 
 import streamlit as st
+st.markdown("""
+<style>
+header {visibility: hidden !important;}
+[data-testid="stToolbar"] {display: none !important;}
+[data-testid="stDecoration"] {display: none !important;}
+[data-testid="stStatusWidget"] {display: none !important;}
+</style>
+""", unsafe_allow_html=True)
 from dotenv import load_dotenv
 
 from db import (
