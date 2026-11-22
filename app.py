@@ -22,8 +22,9 @@ header {display: none !important;}
 [data-testid="stToolbar"] {display: none !important;}
 [data-testid="stDecoration"] {display: none !important;}
 [data-testid="stStatusWidget"] {display: none !important;}
-.block-container {padding-top: 0rem !important; padding-bottom: 0rem !important;}
-.stApp {margin-top: -20px !important;}
+.block-container {padding-top: 0rem !important; margin-top: -80px !important;}
+[data-testid="stMainBlock"] {padding-top: 0rem !important; margin-top: -80px !important;}
+section[data-testid="stMain"] > div {padding-top: 0rem !important;}
 </style>
 """, unsafe_allow_html=True)
 from dotenv import load_dotenv
