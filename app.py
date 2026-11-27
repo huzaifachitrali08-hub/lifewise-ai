@@ -153,7 +153,7 @@ def show_brand():
             st.markdown("# 🧭 LIFEWISE AI")
         st.markdown('<div class="lw-brand-copy">Your personal AI counselor · Learn · Grow · Achieve</div>', unsafe_allow_html=True)
     with status_col:
-        st.markdown('<div style="height:20px"></div><div class="lw-status"><span class="lw-dot"></span> Ready to help</div>', unsafe_allow_html=True)
+        st.markdown('<div style="height:40px"></div><div class="lw-status"><span class="lw-dot"></span> Ready to help</div>', unsafe_allow_html=True)
 
 
 def show_authentication():
